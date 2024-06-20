@@ -143,7 +143,7 @@ def plotPolygons(region, hexagons, wcs, data):
     plt.xlabel('RA')
     plt.ylabel('DEC')
     
-    #save fig    
+    #plot and save fig    
     plt.savefig("hex_grid_2.png")
 
 if __name__ == "__main__":
