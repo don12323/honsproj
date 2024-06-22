@@ -2,6 +2,7 @@ import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+import argparse
 
 from matplotlib.patches import RegularPolygon
 from matplotlib.patches import Polygon as MtPltPolygon
@@ -129,16 +130,19 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     bkg_polygon = Polygon(bkg_coords)
     
     #calculate the mean background flux
+    npix=0
     bkg_flux_values = []
     min_x, min_y, max_x, max_y = bkg_polygon.bounds
     for y in range(math.ceil(min_y), math.floor(max_y)):
         for x in range(math.ceil(min_x), math.floor(max_x)):
             if bkg_polygon.contains(Point(x,y)):
                 bkg_flux_values.append(data[y-1,x-1])
+                npix+=1
+
     
     print("\n")
     bkg_flux = np.mean(bkg_flux_values)
-    print("mean bkg flux:", bkg_flux, "Jy/beam") 
+    print("mean bkg flux:", bkg_flux, "Jy/beam. Number of pixels: ",npix) 
     
     #calculate integrated flux for each hexagon
     print("---------------------------------------------")
@@ -189,11 +193,13 @@ def plotPolygons(region, hexagons, wcs, data):
     plt.savefig("hex_grid_2.png")
 
 if __name__ == "__main__":
-    
+    parser = argparse.ArgumentParser(description="Hexagonal grid flux measurement")
+    parser.add_argument('width', type=float, help="Width of the hexagons")
+    args = parser.parse_args()
+    width = args.width
     fits_files = ['../data/3c391_ctm_spw0_multiscale_fixed.fits']
     reg_file = '../data/reg1_deg_icrs.reg'
     bkg_file = 'bkg_test.reg'
-    width = 28.0
 
     for f in fits_files:
 
