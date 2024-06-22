@@ -37,7 +37,7 @@ def calc_hex_vert(centre, width):
     return vertices
 
 def extract_header_data(filename):
-    
+    print("**READING IN FITS FILE**")
     with fits.open(filename) as hdu:
 	
         data = hdu[0].data	
@@ -52,13 +52,14 @@ def extract_header_data(filename):
         except KeyError:
             pixd1, pixd2 = header["CD1_1"], header["CD2_2"]
 
+        
         print("pixd1", pixd1, "pixd2", pixd2)
-        #find beam area
         barea = np.pi*bmaj*bmin/(4.0*np.log(2))
-        #pixels per beam
         npixpb = barea/(abs(pixd1*pixd2))
-
-        print("number of pixels per beam:", npixpb)
+        
+        print(f"NAXIS: {naxis}")
+        print(f"Beam area: {barea}")
+        print(f"Number of pixels per beam: {npixpb}")
 
         wcs = WCS(header, naxis= naxis)
     return data, wcs, header, pixd1, pixd2, barea
@@ -71,15 +72,16 @@ def polygons(reg_file, header, width):
     #read polygon region file and get pixel coordinates
     regions = pyregion.open(reg_file).as_imagecoord(header=header)
     for region in regions:
-        print("scanning region")
+
+        print("---------------------------------------------")
+        print("**READING POLYGON REGION**")
         policoords = region.coord_list
         for i in range(0, len(policoords), 2):
             x.append(float(policoords[i]))
             y.append(float(policoords[i+1]))
         
     poly_pix.coords = [(x[i], y[i]) for i in range(len(x))]
-    print("printing pixels for polygon region")
-    print(poly_pix.coords)
+    
     #create bounding rectangle on polygon
     xmin = xmax = poly_pix.coords[0][0]
     ymin = ymax = poly_pix.coords[0][1]
@@ -101,8 +103,7 @@ def polygons(reg_file, header, width):
     #filter out centres that lie inside polygon
     polygon = Polygon(poly_pix.coords)
     new_centres = [point for point in centres if polygon.contains(Point(point))]
-    print("\n") 
-    print("centres for hexagons", new_centres)
+    print("Number of hexagons formed:", len(new_centres))
 
     #calculate hex vertices
     hexagons=[]
@@ -117,30 +118,54 @@ def polygons(reg_file, header, width):
     
 def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     #read in background polygon in image coordinates
+    print("---------------------------------------------")
+    print("**CALCULATING BACKGROUND FLUX**")
     bkg_regions = pyregion.open(bkg_file).as_imagecoord(header=header)
     bkg_coords = []
     for region in bkg_regions:
         for i in range(0, len(region.coord_list), 2):
             bkg_coords.append((region.coord_list[i], region.coord_list[i+1]))
 
-        #bkg_coords.extend([(region.coord_list[i], region.coord_list[i + 1]) for i in range(0, len(region.coord_list), 2)])
-                        
     bkg_polygon = Polygon(bkg_coords)
     
     #calculate the mean background flux
     bkg_flux_values = []
     min_x, min_y, max_x, max_y = bkg_polygon.bounds
-    print("minx", min_x, "miny", min_y, "maxx",max_x, "maxy",max_y)
-    # loop to collect bkg flux values within polygon
     for y in range(math.ceil(min_y), math.floor(max_y)):
         for x in range(math.ceil(min_x), math.floor(max_x)):
             if bkg_polygon.contains(Point(x,y)):
                 bkg_flux_values.append(data[y-1,x-1])
     
     print("\n")
-    print("background flux values:", bkg_flux_values)
     bkg_flux = np.mean(bkg_flux_values)
-    print("mean bkg flux Jy/beam", bkg_flux) 
+    print("mean bkg flux:", bkg_flux, "Jy/beam") 
+    
+    #calculate integrated flux for each hexagon
+    print("---------------------------------------------")
+    print("**CALCULATING FLUXES FOR HEX**")
+    
+    total_fluxes = []
+    for hexagon in hexagons:
+        hex_polygon = Polygon(hexagon.vertices)
+        total_flux_in_hex = 0
+        npix = 0
+        
+        min_x, min_y, max_x, max_y = hex_polygon.bounds
+        #print("minx", min_x, "miny", min_y, "maxx",max_x, "maxy",max_y)
+    
+        for y in range(math.ceil(min_y), math.floor(max_y)):
+            for x in range(math.ceil(min_x), math.floor(max_x)):
+                if hex_polygon.contains(Point(x,y)):
+                    total_flux_in_hex += data[y-1,x-1]
+                    npix += 1
+
+        #calculate the integrated flux
+        print(f"Number of pixels in hex {hexagon.name}: {npix} Aperture size: {npix*pixarea}")
+        int_flux = (total_flux_in_hex * pixarea / barea) - (bkg_flux * npix * pixarea / barea) 
+        total_fluxes.append(int_flux)
+
+    for hexagon, flux in zip(hexagons, total_fluxes):
+        print(f"Hexagon {hexagon.name}: Integrated Flux = {flux} Jy")
 
    
 
@@ -168,14 +193,14 @@ if __name__ == "__main__":
     fits_files = ['../data/3c391_ctm_spw0_multiscale_fixed.fits']
     reg_file = '../data/reg1_deg_icrs.reg'
     bkg_file = 'bkg_test.reg'
-    width = 30
+    width = 28.0
 
     for f in fits_files:
 
         data, wcs, header, pixd1, pixd2, barea = extract_header_data(f)
         poly_pix, hexagons = polygons(reg_file, header, width)
         #measure flux in each hexagon
-        measure_flux(header, hexagons, data, pixd2*pixd1, barea, bkg_file)
+        measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
         #plotting
         region = MtPltPolygon(poly_pix.coords, closed=True, edgecolor='r', linewidth=1, fill=False)
         plotPolygons(region, hexagons, wcs, data) 
