@@ -132,12 +132,14 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     #calculate the mean background flux
     npix=0
     bkg_flux_values = []
+    bkg_pixels = []
     min_x, min_y, max_x, max_y = bkg_polygon.bounds
-    for y in range(math.ceil(min_y), math.floor(max_y)):
+    for y in range(math.ceil(min_y), math.floor(max_y)+1):
         for x in range(math.ceil(min_x), math.floor(max_x)):
             if bkg_polygon.contains(Point(x,y)):
                 bkg_flux_values.append(data[y-1,x-1])
                 npix+=1
+                bkg_pixels.append((x, y))
 
     
     print("\n")
@@ -171,12 +173,12 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     for hexagon, flux in zip(hexagons, total_fluxes):
         print(f"Hexagon {hexagon.name}: Integrated Flux = {flux} Jy")
 
-   
+    return bkg_pixels, bkg_polygon
 
 
  
 
-def plotPolygons(region, hexagons, wcs, data): 
+def plotPolygons(region, hexagons, wcs, data, bkg_pixels, bkg_polygon): 
     fig = plt.figure(figsize=(8,8))
     ax = fig.add_subplot(1,1,1,projection=wcs)
     im=ax.imshow(data, cmap='gray')
@@ -186,11 +188,26 @@ def plotPolygons(region, hexagons, wcs, data):
     for hexagon in hexagons:
         ax.add_patch(hexagon.polygon)
         ax.annotate(hexagon.name, xy=hexagon.centre, ha='center', va='center', color='white')   
+    
+    #plot background
+    bkg_patch = MtPltPolygon(bkg_polygon.exterior.coords, closed=True, edgecolor='blue', fill=False)
+    ax.add_patch(bkg_patch)
+    # Plot background pixels
+    bkg_x, bkg_y = zip(*bkg_pixels)
+    ax.plot(bkg_x, bkg_y, 'ro', markersize=1)
+
+
+
+
     plt.xlabel('RA')
     plt.ylabel('DEC')
     
+    
+
+
     #plot and save fig    
-    plt.savefig("hex_grid_2.png")
+    plt.savefig("hex_grid_1.png")
+    plt.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Hexagonal grid flux measurement")
@@ -206,10 +223,10 @@ if __name__ == "__main__":
         data, wcs, header, pixd1, pixd2, barea = extract_header_data(f)
         poly_pix, hexagons = polygons(reg_file, header, width)
         #measure flux in each hexagon
-        measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
+        bkg_pixels, bkg_polygon = measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
         #plotting
         region = MtPltPolygon(poly_pix.coords, closed=True, edgecolor='r', linewidth=1, fill=False)
-        plotPolygons(region, hexagons, wcs, data) 
+        plotPolygons(region, hexagons, wcs, data, bkg_pixels, bkg_polygon) 
 
 
         
