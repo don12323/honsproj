@@ -112,7 +112,8 @@ def polygons(reg_file, header, width):
         name = f"{i+1}"
         hex_vertices = calc_hex_vert(centre, width)
         hexagon = Hexagon(name, hex_vertices, centre)
-        hexagons.append(hexagon)
+        if all(polygon.contains(Point(v)) for v in hex_vertices):
+            hexagons.append(hexagon)
     
     return poly_pix, hexagons
 
