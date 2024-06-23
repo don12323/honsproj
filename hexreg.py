@@ -150,7 +150,7 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
 
     print("mean bkg flux:", bkg_flux, "Jy/beam. Number of pixels: ",npix) 
     print("std bkg flux:", std_bkg, "Jy/beam.")
-    print("RMS bkg flux:", rms_bkg)
+    print("RMS bkg flux:", rms_bkg, "Jy/beam.")
     #calculate integrated flux for each hexagon
     print("---------------------------------------------")
     print("**CALCULATING FLUXES FOR HEX**")
