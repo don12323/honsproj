@@ -134,8 +134,9 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     bkg_flux_values = []
     bkg_pixels = []
     min_x, min_y, max_x, max_y = bkg_polygon.bounds
-    for y in range(math.ceil(min_y), math.floor(max_y)+1):
-        for x in range(math.ceil(min_x), math.floor(max_x)):
+    for y in range(math.ceil(min_y)-1, math.floor(max_y)+1):
+        for x in range(math.ceil(min_x)-1, math.floor(max_x)+1):
+            #corners
             if bkg_polygon.contains(Point(x,y)):
                 bkg_flux_values.append(data[y-1,x-1])
                 npix+=1
@@ -144,13 +145,18 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     
     print("\n")
     bkg_flux = np.mean(bkg_flux_values)
+    std_bkg = np.std(bkg_flux_values)
+    rms_bkg = np.sqrt(np.mean(np.array(bkg_flux_values)**2))
+
     print("mean bkg flux:", bkg_flux, "Jy/beam. Number of pixels: ",npix) 
-    
+    print("std bkg flux:", std_bkg, "Jy/beam.")
+    print("RMS bkg flux:", rms_bkg)
     #calculate integrated flux for each hexagon
     print("---------------------------------------------")
     print("**CALCULATING FLUXES FOR HEX**")
     
     total_fluxes = []
+    unc = []
     for hexagon in hexagons:
         hex_polygon = Polygon(hexagon.vertices)
         total_flux_in_hex = 0
