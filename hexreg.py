@@ -112,9 +112,37 @@ def polygons(reg_file, header, width):
         name = f"{i+1}"
         hex_vertices = calc_hex_vert(centre, width)
         hexagon = Hexagon(name, hex_vertices, centre)
-        hexagons.append(hexagon)
+        if all(polygon.contains(Point(v)) for v in hex_vertices):
+            hexagons.append(hexagon)
     
-    return poly_pix, hexagons
+    #optimise the hexagon fitting within polygons
+    for _ in range(1000):
+        new_centres = []
+        for hexagon in hexagons:
+            new_centre = np.array(hexagon.centre)
+            for neighbor in hexagons:
+                if hexagon != neighbor:
+                    dist = np.linalg.norm(np.array(hexagon.centre) - np.array(neighbor.centre))
+                    if dist < width:
+                        direction = (np.array(hexagon.centre) - np.array(neighbor.centre)) / dist
+                        new_centre += direction * 0.1  # Small adjustment towards the optimal position
+                        new_centres.append(tuple(new_centre))
+            new_centres.append(tuple(new_centre))
+    
+    new_hexagons=[]
+    for i, centre in enumerate(new_centres):
+        name = f"{i+1}"
+        hex_vertices = calc_hex_vert(centre, width)
+        hexagon = Hexagon(name, hex_vertices, centre)
+        if all(polygon.contains(Point(v)) for v in hex_vertices):
+            new_hexagons.append(hexagon)
+    
+
+
+
+
+
+    return poly_pix, new_hexagons
 
     
 def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
@@ -132,7 +160,6 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     #calculate the mean background flux
     npix=0
     bkg_flux_values = []
-    bkg_pixels = []
     min_x, min_y, max_x, max_y = bkg_polygon.bounds
     for y in range(math.ceil(min_y)-1, math.floor(max_y)+1):
         for x in range(math.ceil(min_x)-1, math.floor(max_x)+1):
@@ -140,7 +167,6 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
             if bkg_polygon.contains(Point(x,y)):
                 bkg_flux_values.append(data[y-1,x-1])
                 npix+=1
-                bkg_pixels.append((x, y))
 
     
     print("\n")
@@ -179,15 +205,15 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     for hexagon, flux in zip(hexagons, total_fluxes):
         print(f"Hexagon {hexagon.name}: Integrated Flux = {flux} Jy")
 
-    return bkg_pixels, bkg_polygon
+    return bkg_polygon
 
 
  
 
-def plotPolygons(region, hexagons, wcs, data, bkg_pixels, bkg_polygon): 
+def plotPolygons(region, hexagons, wcs, data, bkg_polygon): 
     fig = plt.figure(figsize=(8,8))
     ax = fig.add_subplot(1,1,1,projection=wcs)
-    im=ax.imshow(data, cmap='gray')
+    im=ax.imshow(data, cmap='hot')
 
     ax.add_patch(region)
 
@@ -198,19 +224,10 @@ def plotPolygons(region, hexagons, wcs, data, bkg_pixels, bkg_polygon):
     #plot background
     bkg_patch = MtPltPolygon(bkg_polygon.exterior.coords, closed=True, edgecolor='blue', fill=False)
     ax.add_patch(bkg_patch)
-    # Plot background pixels
-    bkg_x, bkg_y = zip(*bkg_pixels)
-    ax.plot(bkg_x, bkg_y, 'ro', markersize=1)
-
-
-
 
     plt.xlabel('RA')
     plt.ylabel('DEC')
     
-    
-
-
     #plot and save fig    
     plt.savefig("hex_grid_1.png")
     plt.show()
@@ -229,10 +246,10 @@ if __name__ == "__main__":
         data, wcs, header, pixd1, pixd2, barea = extract_header_data(f)
         poly_pix, hexagons = polygons(reg_file, header, width)
         #measure flux in each hexagon
-        bkg_pixels, bkg_polygon = measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
+        bkg_polygon = measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
         #plotting
         region = MtPltPolygon(poly_pix.coords, closed=True, edgecolor='r', linewidth=1, fill=False)
-        plotPolygons(region, hexagons, wcs, data, bkg_pixels, bkg_polygon) 
+        plotPolygons(region, hexagons, wcs, data, bkg_polygon) 
 
 
         
