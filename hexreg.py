@@ -125,7 +125,7 @@ def polygons(reg_file, header, width):
                     dist = np.linalg.norm(np.array(hexagon.centre) - np.array(neighbor.centre))
                     if dist < width:
                         direction = (np.array(hexagon.centre) - np.array(neighbor.centre)) / dist
-                        new_centre += direction * 0.1  # Small adjustment towards the optimal position
+                        new_centre += direction * 5  # Small adjustment towards the optimal position
                         new_centres.append(tuple(new_centre))
             new_centres.append(tuple(new_centre))
     
