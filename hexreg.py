@@ -179,12 +179,12 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     for hexagon, flux in zip(hexagons, total_fluxes):
         print(f"Hexagon {hexagon.name}: Integrated Flux = {flux} Jy")
 
-    return bkg_pixels, bkg_polygon
+    return bkg_polygon
 
 
  
 
-def plotPolygons(region, hexagons, wcs, data, bkg_pixels, bkg_polygon): 
+def plotPolygons(region, hexagons, wcs, data, bkg_polygon): 
     fig = plt.figure(figsize=(8,8))
     ax = fig.add_subplot(1,1,1,projection=wcs)
     im=ax.imshow(data, cmap='gray')
@@ -198,9 +198,6 @@ def plotPolygons(region, hexagons, wcs, data, bkg_pixels, bkg_polygon):
     #plot background
     bkg_patch = MtPltPolygon(bkg_polygon.exterior.coords, closed=True, edgecolor='blue', fill=False)
     ax.add_patch(bkg_patch)
-    # Plot background pixels
-    bkg_x, bkg_y = zip(*bkg_pixels)
-    ax.plot(bkg_x, bkg_y, 'ro', markersize=1)
 
 
 
@@ -229,10 +226,10 @@ if __name__ == "__main__":
         data, wcs, header, pixd1, pixd2, barea = extract_header_data(f)
         poly_pix, hexagons = polygons(reg_file, header, width)
         #measure flux in each hexagon
-        bkg_pixels, bkg_polygon = measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
+        bkg_polygon = measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
         #plotting
         region = MtPltPolygon(poly_pix.coords, closed=True, edgecolor='r', linewidth=1, fill=False)
-        plotPolygons(region, hexagons, wcs, data, bkg_pixels, bkg_polygon) 
+        plotPolygons(region, hexagons, wcs, data, bkg_polygon) 
 
 
         
