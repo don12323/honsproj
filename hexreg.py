@@ -131,7 +131,7 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     bkg_polygon = Polygon(bkg_coords)
     
     #calculate the mean background flux
-    npix=0
+    npix_bkg=0
     bkg_flux_values = []
     bkg_pixels = []
     min_x, min_y, max_x, max_y = bkg_polygon.bounds
@@ -140,18 +140,18 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
             #corners
             if bkg_polygon.contains(Point(x,y)):
                 bkg_flux_values.append(data[y-1,x-1])
-                npix+=1
+                npixi_bkg+=1
                 bkg_pixels.append((x, y))
 
     
     print("\n")
     bkg_flux = np.mean(bkg_flux_values)
     std_bkg = np.std(bkg_flux_values)
-    rms_bkg = np.sqrt(np.mean(np.array(bkg_flux_values)**2))
+#   rms_bkg = np.sqrt(np.mean(np.array(bkg_flux_values)**2))
 
-    print("mean bkg flux:", bkg_flux, "Jy/beam. Number of pixels: ",npix) 
+    print("mean bkg flux:", bkg_flux, "Jy/beam. Number of pixels in background: ",npix_bkg) 
     print("std bkg flux:", std_bkg, "Jy/beam.")
-    print("RMS bkg flux:", rms_bkg, "Jy/beam.")
+ #   print("RMS bkg flux:", rms_bkg, "Jy/beam.")
     #calculate integrated flux for each hexagon
     print("---------------------------------------------")
     print("**CALCULATING FLUXES FOR HEX**")
@@ -161,7 +161,7 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     for hexagon in hexagons:
         hex_polygon = Polygon(hexagon.vertices)
         total_flux_in_hex = 0
-        npix = 0
+        npix_hex = 0
         
         min_x, min_y, max_x, max_y = hex_polygon.bounds
         #print("minx", min_x, "miny", min_y, "maxx",max_x, "maxy",max_y)
@@ -170,11 +170,11 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
             for x in range(math.ceil(min_x), math.floor(max_x)):
                 if hex_polygon.contains(Point(x,y)):
                     total_flux_in_hex += data[y-1,x-1]
-                    npix += 1
+                    npix_hex += 1
 
         #calculate the integrated flux
-        print(f"Number of pixels in hex {hexagon.name}: {npix} Aperture size: {npix*pixarea}")
-        int_flux = (total_flux_in_hex * pixarea / barea) - (bkg_flux * npix * pixarea / barea) 
+        print(f"Number of pixels in hex {hexagon.name}: {npix_hex} Aperture size: {npix_hex*pixarea}")
+        int_flux = (total_flux_in_hex * npix_hex * pixarea / barea) - (bkg_flux * npix_bkg * pixarea / barea) 
         total_fluxes.append(int_flux)
 
     for hexagon, flux in zip(hexagons, total_fluxes):
