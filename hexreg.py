@@ -140,7 +140,7 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
             #corners
             if bkg_polygon.contains(Point(x,y)):
                 bkg_flux_values.append(data[y-1,x-1])
-                npixi_bkg+=1
+                npix_bkg+=1
                 bkg_pixels.append((x, y))
 
     
@@ -218,9 +218,9 @@ if __name__ == "__main__":
     parser.add_argument('width', type=float, help="Width of the hexagons")
     args = parser.parse_args()
     width = args.width
-    fits_files = ['../data/3c391_ctm_spw0_multiscale_fixed.fits']
-    reg_file = '../data/reg1_deg_icrs.reg'
-    bkg_file = 'bkg_test.reg'
+    fits_files = ['../J01445/J01445_Combined_C_split_channel_block0.smalltest2.fits']
+    reg_file = 'toplobe.reg'
+    bkg_file = 'bkg.reg'
 
     for f in fits_files:
 
