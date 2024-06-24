@@ -14,12 +14,6 @@ from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 
-#list to store x and y coordinates
-class coords:
-    def __init__(self):
-        self.coords = []
-
-
 class Hexagon:
     def __init__(self, name, vertices,centre):
         self.name = name
@@ -67,33 +61,18 @@ def extract_header_data(filename):
 
 def polygons(reg_file, header, width):
     
-    poly_pix = coords()
-    x = []
-    y = []
     #read polygon region file and get pixel coordinates
+    print("---------------------------------------------")
+    print("**READING POLYGON REGION**")
     regions = pyregion.open(reg_file).as_imagecoord(header=header)
+    poly_coords=[]
     for region in regions:
-
-        print("---------------------------------------------")
-        print("**READING POLYGON REGION**")
-        policoords = region.coord_list
-        for i in range(0, len(policoords), 2):
-            x.append(float(policoords[i]))
-            y.append(float(policoords[i+1]))
-        
-    poly_pix.coords = [(x[i], y[i]) for i in range(len(x))]
+        for i in range(0, len(region.coord_list), 2):
+            poly_coords.append((region.coord_list[i], region.coord_list[i+1])) 
     
+    polygon = Polygon(poly_coords)
     #create bounding rectangle on polygon
-    xmin = xmax = poly_pix.coords[0][0]
-    ymin = ymax = poly_pix.coords[0][1]
-    
-    for coord in poly_pix.coords:
-        x, y = coord
-        xmin = min(xmin,x)
-        xmax = max(xmax,x)
-        ymin = min(ymin,y)
-        ymax = max(ymax,y)
-
+    xmin, ymin, xmax, ymax = polygon.bounds
     #find hexagon centres that fit inside rectangle
     centres = []
     for y in np.arange(ymin-width,ymax, width):
@@ -102,7 +81,6 @@ def polygons(reg_file, header, width):
             centres.append((x+width*np.sqrt(3)/2, y + width/2))
 
     #filter out centres that lie inside polygon
-    polygon = Polygon(poly_pix.coords)
     new_centres = [point for point in centres if polygon.contains(Point(point))]
     print("Number of hexagons formed:", len(new_centres))
 
@@ -115,7 +93,7 @@ def polygons(reg_file, header, width):
         if all(polygon.contains(Point(v)) for v in hex_vertices):
             hexagons.append(hexagon)
     
-    return poly_pix, hexagons
+    return poly_coords, hexagons
 
     
 def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
@@ -174,15 +152,13 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
 
         #calculate the integrated flux
         print(f"Number of pixels in hex {hexagon.name}: {npix_hex} Aperture size: {npix_hex*pixarea}")
-        int_flux = (total_flux_in_hex * npix_hex * pixarea / barea) - (bkg_flux * npix_bkg * pixarea / barea) 
+        int_flux = (total_flux_in_hex * pixarea / barea) - (bkg_flux * npix_hex * pixarea / barea) #bkg_flux*(nbeams inside hex)
         total_fluxes.append(int_flux)
 
     for hexagon, flux in zip(hexagons, total_fluxes):
         print(f"Hexagon {hexagon.name}: Integrated Flux = {flux} Jy")
 
     return bkg_polygon
-
-
  
 
 def plotPolygons(region, hexagons, wcs, data, bkg_polygon): 
@@ -200,15 +176,9 @@ def plotPolygons(region, hexagons, wcs, data, bkg_polygon):
     bkg_patch = MtPltPolygon(bkg_polygon.exterior.coords, closed=True, edgecolor='blue', fill=False)
     ax.add_patch(bkg_patch)
 
-
-
-
     plt.xlabel('RA')
     plt.ylabel('DEC')
     
-    
-
-
     #plot and save fig    
     plt.savefig("hex_grid_1.png")
     plt.show()
@@ -218,9 +188,14 @@ if __name__ == "__main__":
     parser.add_argument('width', type=float, help="Width of the hexagons")
     args = parser.parse_args()
     width = args.width
-    fits_files = ['../J01445/J01445_Combined_C_split_channel_block0.smalltest2.fits']
-    reg_file = 'toplobe.reg'
-    bkg_file = 'bkg.reg'
+    #fits_files = ['../J01445/J01445_Combined_C_split_channel_block0.smalltest2.fits']
+    #reg_file = 'toplobe.reg'
+    #bkg_file = 'bkg.reg'
+    fits_files = ['../data/3c391_ctm_spw0_multiscale_fixed.fits']
+    reg_file = '../data/reg1_deg_icrs.reg'
+    bkg_file = 'bkg_test.reg'
+
+
 
     for f in fits_files:
 
@@ -229,7 +204,7 @@ if __name__ == "__main__":
         #measure flux in each hexagon
         bkg_polygon = measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
         #plotting
-        region = MtPltPolygon(poly_pix.coords, closed=True, edgecolor='r', linewidth=1, fill=False)
+        region = MtPltPolygon(poly_pix, closed=True, edgecolor='r', linewidth=1, fill=False)
         plotPolygons(region, hexagons, wcs, data, bkg_polygon) 
 
 
