@@ -125,17 +125,16 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     print("\n")
     bkg_flux = np.mean(bkg_flux_values)
     std_bkg = np.std(bkg_flux_values)
-#   rms_bkg = np.sqrt(np.mean(np.array(bkg_flux_values)**2))
 
     print("mean bkg flux:", bkg_flux, "Jy/beam. Number of pixels in background: ",npix_bkg) 
     print("std bkg flux:", std_bkg, "Jy/beam.")
- #   print("RMS bkg flux:", rms_bkg, "Jy/beam.")
+    
     #calculate integrated flux for each hexagon
     print("---------------------------------------------")
     print("**CALCULATING FLUXES FOR HEX**")
     
     total_fluxes = []
-    unc = []
+    uncertainties = []
     for hexagon in hexagons:
         hex_polygon = Polygon(hexagon.vertices)
         total_flux_in_hex = 0
@@ -150,17 +149,18 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
                 if hex_polygon.contains(Point(x,y)):
                     total_flux_in_hex += data[y-1,x-1]
                     npix_hex += 1
-                    flux_squared.append = data[y-1,x-1]**2
+                    flux_squared.append(data[y-1,x-1]**2)
 
 
         #calculate the integrated flux
         print(f"Number of pixels in hex {hexagon.name}: {npix_hex} Aperture size: {npix_hex*pixarea}")
         int_flux = (total_flux_in_hex * pixarea / barea) - (bkg_flux * npix_hex * pixarea / barea) #bkg_flux*(nbeams inside hex)
         total_fluxes.append(int_flux)
+        #uncertainties
         rms = np.sqrt(np.mean(np.array(flux_squared)))
-        unc = unc.append(rms)
-    for hexagon, flux, un in zip(hexagons, total_fluxes, unc):
-        print(f"Hexagon {hexagon.name}: Integrated Flux = {flux} +- {un}Jy, ")
+        uncertainties.append(np.sqrt(rms**2 + (0.02 * int_flux)**2 + (std_bkg * npix_hex * pixarea / barea)**2))
+    for hexagon, flux, uncertainty in zip(hexagons, total_fluxes, uncertainties):
+        print(f"Hexagon {hexagon.name}: Integrated Flux = {flux} +- {uncertainty}Jy, ")
 
     return bkg_polygon
  
