@@ -140,6 +140,7 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
         hex_polygon = Polygon(hexagon.vertices)
         total_flux_in_hex = 0
         npix_hex = 0
+        flux_squared = []
         
         min_x, min_y, max_x, max_y = hex_polygon.bounds
         #print("minx", min_x, "miny", min_y, "maxx",max_x, "maxy",max_y)
@@ -149,14 +150,17 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
                 if hex_polygon.contains(Point(x,y)):
                     total_flux_in_hex += data[y-1,x-1]
                     npix_hex += 1
+                    flux_squared.append = data[y-1,x-1]**2
+
 
         #calculate the integrated flux
         print(f"Number of pixels in hex {hexagon.name}: {npix_hex} Aperture size: {npix_hex*pixarea}")
         int_flux = (total_flux_in_hex * pixarea / barea) - (bkg_flux * npix_hex * pixarea / barea) #bkg_flux*(nbeams inside hex)
         total_fluxes.append(int_flux)
-
-    for hexagon, flux in zip(hexagons, total_fluxes):
-        print(f"Hexagon {hexagon.name}: Integrated Flux = {flux} Jy")
+        rms = np.sqrt(np.mean(np.array(flux_squared)))
+        unc = unc.append(rms)
+    for hexagon, flux, un in zip(hexagons, total_fluxes, unc):
+        print(f"Hexagon {hexagon.name}: Integrated Flux = {flux} +- {un}Jy, ")
 
     return bkg_polygon
  
@@ -203,20 +207,12 @@ if __name__ == "__main__":
         poly_pix, hexagons = polygons(reg_file, header, width)
         #measure flux in each hexagon
         bkg_polygon = measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
+        
         #plotting
         region = MtPltPolygon(poly_pix, closed=True, edgecolor='r', linewidth=1, fill=False)
         plotPolygons(region, hexagons, wcs, data, bkg_polygon) 
 
 
-        
-
-
-
-        #for i in range(0,len(X)):
-
-         #   print(X[i],Y[i])
-
-    
 
 
 
