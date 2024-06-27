@@ -17,7 +17,7 @@ from astropy.utils.exceptions import AstropyWarning
 
 import warnings
 import sys
-
+#ignore warnings from wcs
 warnings.simplefilter('ignore', AstropyWarning)
 
 class Colors:
@@ -57,7 +57,8 @@ def extract_header_data(filename):
         naxis = header["NAXIS"]
         bmaj = header["BMAJ"]
         bmin = header["BMIN"]
-
+        freq = header["RESTFRQ"]
+        print(f"{Colors.OKGREEN} FREQ: {freq}Hz {Colors.ENDC}")
         if naxis != 2:
             print(f"{Colors.FAIL}Error: NAXIS is not equal to 2 for file: {filename}{Colors.ENDC}")
             sys.exit(1)
@@ -77,7 +78,7 @@ def extract_header_data(filename):
         print(f"   Number of pixels per beam: {npixpb}")
 
         wcs = WCS(header, naxis= naxis)
-    return data, wcs, header, pixd1, pixd2, barea
+    return data, wcs, header, pixd1, pixd2, barea, freq
 
 def polygons(reg_file, header, width, pix1):
     
@@ -221,15 +222,17 @@ if __name__ == "__main__":
     #reg_file = '../data/reg1_deg_icrs.reg'
     #bkg_file = 'bkg_test.reg'
 
-
+    frequencies = []
 
     for f in fits_files:
 
-        data, wcs, header, pixd1, pixd2, barea = extract_header_data(f)
+        data, wcs, header, pixd1, pixd2, barea, freq = extract_header_data(f)
         poly_pix, hexagons = polygons(reg_file, header, width, pixd1)
         #measure flux in each hexagon
         bkg_polygon = measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
         
+        frequencies.append(freq)
+
         #plotting
         region = MtPltPolygon(poly_pix, closed=True, edgecolor='r', linewidth=1, fill=False)
         plotPolygons(region, hexagons, wcs, data, bkg_polygon) 
