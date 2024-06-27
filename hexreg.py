@@ -13,6 +13,12 @@ from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 from astropy import units as u
+from astropy.utils.exceptions import AstropyWarning
+
+import warnings
+import sys
+
+warnings.simplefilter('ignore', AstropyWarning)
 
 class Colors:
     HEADER = '\033[95m'
@@ -43,7 +49,7 @@ def calc_hex_vert(centre, width):
     return vertices
 
 def extract_header_data(filename):
-    print(f"{Colors.OKCYAN}>> Reading in FITS file: {filename}{Colors.ENDC}") 
+    print(f"{Colors.OKCYAN}>> Reading in FITS file: {filename}{Colors.ENDC} \n") 
     with fits.open(filename) as hdu:
 	
         data = hdu[0].data	
@@ -51,6 +57,10 @@ def extract_header_data(filename):
         naxis = header["NAXIS"]
         bmaj = header["BMAJ"]
         bmin = header["BMIN"]
+
+        if naxis != 2:
+            print(f"{Colors.FAIL}Error: NAXIS is not equal to 2 for file: {filename}{Colors.ENDC}")
+            sys.exit(1)
         
         #find pixel size in degrees. Pixel area in degrees = (pixd1*pixd2)
         try:
@@ -69,7 +79,7 @@ def extract_header_data(filename):
         wcs = WCS(header, naxis= naxis)
     return data, wcs, header, pixd1, pixd2, barea
 
-def polygons(reg_file, header, width):
+def polygons(reg_file, header, width, pix1):
     
     #read polygon region file and get pixel coordinates
     regions = pyregion.open(reg_file).as_imagecoord(header=header)
@@ -81,6 +91,8 @@ def polygons(reg_file, header, width):
     polygon = Polygon(poly_coords)
     #create bounding rectangle on polygon
     xmin, ymin, xmax, ymax = polygon.bounds
+    #convert width from arcsec to pixel units
+    width = width / (abs(pixd1) * 3600)
     #find hexagon centres that fit inside rectangle
     centres = []
     for y in np.arange(ymin-width,ymax, width):
@@ -133,7 +145,7 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     bkg_flux = np.mean(bkg_flux_values)
     std_bkg = np.std(bkg_flux_values)
 
-    print(f"   {Colors.OKGREEN}Background mean flux: {bkg_flux} +- {std_bkg} Jy/beam{Colors.ENDC}")
+    print(f"   {Colors.OKGREEN}Background mean flux: {bkg_flux} +\- {std_bkg} Jy/beam{Colors.ENDC}")
     print("   Number of pixels in background: ",npix_bkg) 
     #calculate integrated flux for each hexagon
     print(f"   {Colors.UNDERLINE}CALCULATING FLUXES FOR HEX{Colors.ENDC}")
@@ -165,7 +177,7 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
         rms = np.sqrt(np.mean(np.array(flux_squared)))
         uncertainties.append(np.sqrt(rms**2 + (0.02 * int_flux)**2 + (std_bkg * npix_hex * pixarea / barea)**2))
     for hexagon, flux, uncertainty in zip(hexagons, total_fluxes, uncertainties):
-        print(f"   Hexagon {hexagon.name}: Integrated Flux = {flux} +- {uncertainty}Jy, ")
+        print(f"   Hexagon {hexagon.name}: Integrated Flux = {flux} +\- {uncertainty}Jy, ")
 
     return bkg_polygon
  
@@ -194,29 +206,34 @@ def plotPolygons(region, hexagons, wcs, data, bkg_polygon):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Hexagonal grid flux measurement")
-    parser.add_argument('width', type=float, help="Width of the hexagons")
+    parser.add_argument('--width', type=float, required=True, help="Width of the hexagons in arcseconds")
+    parser.add_argument('--infits', type=str, required=True, help="Text file containing list of FITS files")
     args = parser.parse_args()
     width = args.width
-    #fits_files = ['../J01445/J01445_Combined_C_split_channel_block0.smalltest2.fits']
-    #reg_file = 'toplobe.reg'
-    #bkg_file = 'bkg.reg'
-    fits_files = ['../data/3c391_ctm_spw0_multiscale_fixed.fits']
-    reg_file = '../data/reg1_deg_icrs.reg'
-    bkg_file = 'bkg_test.reg'
+
+    #read in FITS files
+    with open(args.infits, 'r') as file:
+        fits_files = [line.strip() for line in file.readlines()]
+    
+    reg_file = 'toplobe.reg'
+    bkg_file = 'bkg.reg'
+    
+    #reg_file = '../data/reg1_deg_icrs.reg'
+    #bkg_file = 'bkg_test.reg'
 
 
 
     for f in fits_files:
 
         data, wcs, header, pixd1, pixd2, barea = extract_header_data(f)
-        poly_pix, hexagons = polygons(reg_file, header, width)
+        poly_pix, hexagons = polygons(reg_file, header, width, pixd1)
         #measure flux in each hexagon
         bkg_polygon = measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
         
         #plotting
         region = MtPltPolygon(poly_pix, closed=True, edgecolor='r', linewidth=1, fill=False)
         plotPolygons(region, hexagons, wcs, data, bkg_polygon) 
-
+        print("\n")
 
 
 

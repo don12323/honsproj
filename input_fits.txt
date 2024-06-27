@@ -1,0 +1,8 @@
+../J01445/J01445_Combined_C_split_channel_block0.smalltest2.fits
+../J01445/J01445_Combined_C_split_channel_block1.smalltest2.fits
+../J01445/J01445_Combined_C_split_channel_block2.smalltest2.fits
+../J01445/J01445_Combined_C_split_channel_block3.smalltest2.fits
+../J01445/J01445_Combined_X_split_channel_block0fixed.fits
+../J01445/J01445_Combined_X_split_channel_block1fixed.fits
+../J01445/J01445_Combined_X_split_channel_block2fixed.fits
+../J01445/J01445_Combined_X_split_channel_block3fixed.fits
