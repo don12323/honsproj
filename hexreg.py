@@ -14,6 +14,17 @@ from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 
+class Colors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKCYAN = '\033[96m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
 class Hexagon:
     def __init__(self, name, vertices,centre):
         self.name = name
@@ -32,7 +43,7 @@ def calc_hex_vert(centre, width):
     return vertices
 
 def extract_header_data(filename):
-    print("**READING IN FITS FILE**")
+    print(f"{Colors.OKCYAN}>> Reading in FITS file: {filename}{Colors.ENDC}") 
     with fits.open(filename) as hdu:
 	
         data = hdu[0].data	
@@ -47,14 +58,13 @@ def extract_header_data(filename):
         except KeyError:
             pixd1, pixd2 = header["CD1_1"], header["CD2_2"]
 
+        print(f"   Pixel size: {abs(pixd1*3600)} x {pixd2*3600} arcsec") 
         
-        print("pixd1", pixd1, "pixd2", pixd2)
         barea = np.pi*bmaj*bmin/(4.0*np.log(2))
         npixpb = barea/(abs(pixd1*pixd2))
-        
-        print(f"NAXIS: {naxis}")
-        print(f"Beam area: {barea}")
-        print(f"Number of pixels per beam: {npixpb}")
+        print(f"   Beam area: {barea*3600**2} arcsec^2")        
+        print(f"   NAXIS: {naxis}")
+        print(f"   Number of pixels per beam: {npixpb}")
 
         wcs = WCS(header, naxis= naxis)
     return data, wcs, header, pixd1, pixd2, barea
@@ -62,8 +72,6 @@ def extract_header_data(filename):
 def polygons(reg_file, header, width):
     
     #read polygon region file and get pixel coordinates
-    print("---------------------------------------------")
-    print("**READING POLYGON REGION**")
     regions = pyregion.open(reg_file).as_imagecoord(header=header)
     poly_coords=[]
     for region in regions:
@@ -82,7 +90,7 @@ def polygons(reg_file, header, width):
 
     #filter out centres that lie inside polygon
     new_centres = [point for point in centres if polygon.contains(Point(point))]
-    print("Number of hexagons formed:", len(new_centres))
+    print(f"   {Colors.OKGREEN}Number of hexagons formed:{len(new_centres)} {Colors.ENDC}")
 
     #calculate hex vertices
     hexagons=[]
@@ -98,8 +106,7 @@ def polygons(reg_file, header, width):
     
 def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     #read in background polygon in image coordinates
-    print("---------------------------------------------")
-    print("**CALCULATING BACKGROUND FLUX**")
+    print(f"   {Colors.UNDERLINE}CALCULATING BACKGROUND FLUX{Colors.ENDC}")
     bkg_regions = pyregion.open(bkg_file).as_imagecoord(header=header)
     bkg_coords = []
     for region in bkg_regions:
@@ -126,12 +133,10 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     bkg_flux = np.mean(bkg_flux_values)
     std_bkg = np.std(bkg_flux_values)
 
-    print("mean bkg flux:", bkg_flux, "Jy/beam. Number of pixels in background: ",npix_bkg) 
-    print("std bkg flux:", std_bkg, "Jy/beam.")
-    
+    print(f"   {Colors.OKGREEN}Background mean flux: {bkg_flux} +- {std_bkg} Jy/beam{Colors.ENDC}")
+    print("   Number of pixels in background: ",npix_bkg) 
     #calculate integrated flux for each hexagon
-    print("---------------------------------------------")
-    print("**CALCULATING FLUXES FOR HEX**")
+    print(f"   {Colors.UNDERLINE}CALCULATING FLUXES FOR HEX{Colors.ENDC}")
     
     total_fluxes = []
     uncertainties = []
@@ -153,14 +158,14 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
 
 
         #calculate the integrated flux
-        print(f"Number of pixels in hex {hexagon.name}: {npix_hex} Aperture size: {npix_hex*pixarea}")
+        print(f"   Number of pixels in hex {hexagon.name}: {npix_hex} Aperture size: {npix_hex*pixarea}")
         int_flux = (total_flux_in_hex * pixarea / barea) - (bkg_flux * npix_hex * pixarea / barea) #bkg_flux*(nbeams inside hex)
         total_fluxes.append(int_flux)
         #uncertainties
         rms = np.sqrt(np.mean(np.array(flux_squared)))
         uncertainties.append(np.sqrt(rms**2 + (0.02 * int_flux)**2 + (std_bkg * npix_hex * pixarea / barea)**2))
     for hexagon, flux, uncertainty in zip(hexagons, total_fluxes, uncertainties):
-        print(f"Hexagon {hexagon.name}: Integrated Flux = {flux} +- {uncertainty}Jy, ")
+        print(f"   Hexagon {hexagon.name}: Integrated Flux = {flux} +- {uncertainty}Jy, ")
 
     return bkg_polygon
  
