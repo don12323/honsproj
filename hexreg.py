@@ -32,11 +32,18 @@ class Colors:
     UNDERLINE = '\033[4m'
 
 class Hexagon:
-    def __init__(self, name, vertices,centre):
+    def __init__(self, name):
         self.name = name
+        self.vertices = None
+        self.centre = None
+        self.polygon = None
+        self.fluxes = []
+    def set_attributes(self, vertices, centre):
         self.vertices = vertices
         self.centre = centre
         self.polygon = MtPltPolygon(vertices, closed=True, edgecolor='white', fill=False)
+    def add_flux(self, flux, uncertainty):
+        self.fluxes.append((flux,uncertainty))
 
 #function for calculating hexagon vertices
 def calc_hex_vert(centre, width):
@@ -80,7 +87,7 @@ def extract_header_data(filename):
         wcs = WCS(header, naxis= naxis)
     return data, wcs, header, pixd1, pixd2, barea, freq
 
-def polygons(reg_file, header, width, pix1):
+def polygons(reg_file, header, width, pix1, hexagons = None):
     
     #read polygon region file and get pixel coordinates
     regions = pyregion.open(reg_file).as_imagecoord(header=header)
@@ -104,16 +111,24 @@ def polygons(reg_file, header, width, pix1):
     #filter out centres that lie inside polygon
     new_centres = [point for point in centres if polygon.contains(Point(point))]
 
-    #calculate hex vertices
-    hexagons=[]
-    i=0
-    for centre in new_centres:
-        hex_vertices = calc_hex_vert(centre, width)
-        if all(polygon.contains(Point(v)) for v in hex_vertices):
-            i+=1
-            name = f"{i}"
-            hexagon = Hexagon(name, hex_vertices, centre)
-            hexagons.append(hexagon)
+    #form hexagons/update their attributes
+    if hexagons is None:
+        hexagons=[]
+        i=0
+        for centre in new_centres:
+            hex_vertices = calc_hex_vert(centre, width)
+            if all(polygon.contains(Point(v)) for v in hex_vertices):
+                i+=1
+                name = f"{i}"
+                hexagon = Hexagon(name)
+                hexagon.set_attributes(hex_vertices, centre)
+                hexagons.append(hexagon)
+    else:
+        for hexagon, centre in zip (hexagons, new_centres):
+            hex_vertices = calc_hex_vert(centre, width)
+            if all(polygon.contains(Point(v)) for v in hex_vertices):
+                hexagon.set_attributes(hex_vertices, centre)
+
     
     print(f"   {Colors.OKGREEN}Number of hexagons formed:{len(hexagons)} {Colors.ENDC}\n")
     return poly_coords, hexagons
@@ -176,7 +191,11 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
         total_fluxes.append(int_flux)
         #uncertainties
         rms = np.sqrt(np.mean(np.array(flux_squared)))
-        uncertainties.append(np.sqrt(rms**2 + (0.02 * int_flux)**2 + (std_bkg * npix_hex * pixarea / barea)**2))
+        uncertainty = np.sqrt(rms**2 + (0.02 * int_flux)**2 + (std_bkg * npix_hex * pixarea / barea)**2)
+        uncertainties.append(uncertainty)
+        #add flux to hex
+        hexagon.add_flux(int_flux,uncertainty)
+
     for hexagon, flux, uncertainty in zip(hexagons, total_fluxes, uncertainties):
         print(f"   Hexagon {hexagon.name}: Integrated Flux = {flux*10**3:.4f} +\- {uncertainty*10**3:.6f} mJy, ")
 
@@ -205,6 +224,31 @@ def plotPolygons(region, hexagons, wcs, data, bkg_polygon):
     plt.savefig("hex_grid_1.png")
     plt.show()
 
+
+
+def plot_sed(hexagons, frequencies):
+    for hexagon in hexagons:
+        flux_values = []
+        flux_errors = []
+        print(hexagon.fluxes)
+        for (flux, error) in hexagon.fluxes:
+            flux_values.append(flux)
+            flux_errors.append(error)
+
+        print("size of flux",len(flux_values))
+        print("size of err",len(flux_errors))
+        print("size of freq", len(frequencies))
+        plt.errorbar(frequencies, flux_values, yerr=flux_errors, fmt='o', label=f'Hexagon {hexagon.name}')
+    
+    plt.xlabel('Frequency (Hz)')
+    plt.ylabel('Integrated Flux (Jy)')
+    plt.legend()
+    plt.yscale('log')
+    plt.grid(True)
+    plt.savefig("sed_plot.png")
+    plt.show()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Hexagonal grid flux measurement")
     parser.add_argument('--width', type=float, required=True, help="Width of the hexagons in arcseconds")
@@ -216,18 +260,19 @@ if __name__ == "__main__":
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
     
-    #reg_file = 'toplobe.reg'
-    #bkg_file = 'bkg.reg'
+    reg_file = 'toplobe.reg'
+    bkg_file = 'bkg.reg'
     
-    reg_file = '../data/reg1_deg_icrs.reg'
-    bkg_file = 'bkg_test.reg'
+    #reg_file = '../data/reg1_deg_icrs.reg'
+    #bkg_file = 'bkg_test.reg'
 
     frequencies = []
+    hexagons=None
 
     for f in fits_files:
 
         data, wcs, header, pixd1, pixd2, barea, freq = extract_header_data(f)
-        poly_pix, hexagons = polygons(reg_file, header, width, pixd1)
+        poly_pix, hexagons = polygons(reg_file, header, width, pixd1, hexagons)
         #measure flux in each hexagon
         bkg_polygon = measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
         
@@ -237,6 +282,9 @@ if __name__ == "__main__":
         region = MtPltPolygon(poly_pix, closed=True, edgecolor='r', linewidth=1, fill=False)
         plotPolygons(region, hexagons, wcs, data, bkg_polygon) 
         print("\n")
+    #plot sed for each hex
+    print(frequencies)
+    plot_sed(hexagons, frequencies)
 
 
 
