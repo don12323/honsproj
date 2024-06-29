@@ -69,7 +69,7 @@ def extract_header_data(filename):
         except KeyError:
             pixd1, pixd2 = header["CD1_1"], header["CD2_2"]
 
-        print(f'   Pixel size: {abs(pixd1*3600):.2f}" x {pixd2*3600:.2f}" arcsec') 
+        print(f'   Pixel size: {abs(pixd1*3600):.2f}" x {pixd2*3600:.2f}"') 
         
         barea = np.pi*bmaj*bmin/(4.0*np.log(2))
         npixpb = barea/(abs(pixd1*pixd2))
@@ -162,8 +162,8 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
         min_x, min_y, max_x, max_y = hex_polygon.bounds
         #print("minx", min_x, "miny", min_y, "maxx",max_x, "maxy",max_y)
     
-        for y in range(math.ceil(min_y), math.floor(max_y)):
-            for x in range(math.ceil(min_x), math.floor(max_x)):
+        for y in range(math.ceil(min_y)-1, math.floor(max_y)+1):
+            for x in range(math.ceil(min_x)-1, math.floor(max_x)+1):
                 if hex_polygon.contains(Point(x,y)):
                     total_flux_in_hex += data[y-1,x-1]
                     npix_hex += 1
