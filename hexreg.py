@@ -36,12 +36,10 @@ class Hexagon:
         self.name = name
         self.vertices = None
         self.centre = None
-        self.polygon = None
         self.fluxes = []
     def set_attributes(self, vertices, centre):
         self.vertices = vertices
         self.centre = centre
-        self.polygon = MtPltPolygon(vertices, closed=True, edgecolor='white', fill=False)
     def add_flux(self, flux, uncertainty):
         self.fluxes.append((flux,uncertainty))
 
@@ -87,7 +85,7 @@ def extract_header_data(filename):
         wcs = WCS(header, naxis= naxis)
     return data, wcs, header, pixd1, pixd2, barea, freq
 
-def polygons(reg_file, header, width, pix1, hexagons = None):
+def polygons(reg_file, header, width, pix1, hexagons):
     
     #read polygon region file and get pixel coordinates
     regions = pyregion.open(reg_file).as_imagecoord(header=header)
@@ -109,7 +107,13 @@ def polygons(reg_file, header, width, pix1, hexagons = None):
             centres.append((x+width*np.sqrt(3)/2, y + width/2))
 
     #filter out centres that lie inside polygon
-    new_centres = [point for point in centres if polygon.contains(Point(point))]
+    centres = [point for point in centres if polygon.contains(Point(point))]
+    #filter out centres that have vertices outside polygon boundaries
+    new_centres = []
+    for centre in centres:
+        hex_vertices = calc_hex_vert(centre, width)
+        if all(polygon.contains(Point(v)) for v in hex_vertices):
+            new_centres.append(centre)
 
     #form hexagons/update their attributes
     if hexagons is None:
@@ -117,17 +121,15 @@ def polygons(reg_file, header, width, pix1, hexagons = None):
         i=0
         for centre in new_centres:
             hex_vertices = calc_hex_vert(centre, width)
-            if all(polygon.contains(Point(v)) for v in hex_vertices):
-                i+=1
-                name = f"{i}"
-                hexagon = Hexagon(name)
-                hexagon.set_attributes(hex_vertices, centre)
-                hexagons.append(hexagon)
+            i+=1
+            name = f"{i}"
+            hexagon = Hexagon(name)
+            hexagon.set_attributes(hex_vertices, centre)
+            hexagons.append(hexagon)
     else:
         for hexagon, centre in zip (hexagons, new_centres):
             hex_vertices = calc_hex_vert(centre, width)
-            if all(polygon.contains(Point(v)) for v in hex_vertices):
-                hexagon.set_attributes(hex_vertices, centre)
+            hexagon.set_attributes(hex_vertices, centre)
 
     
     print(f"   {Colors.OKGREEN}Number of hexagons formed:{len(hexagons)} {Colors.ENDC}\n")
@@ -210,7 +212,8 @@ def plotPolygons(region, hexagons, wcs, data, bkg_polygon):
     ax.add_patch(region)
 
     for hexagon in hexagons:
-        ax.add_patch(hexagon.polygon)
+        patch = MtPltPolygon(hexagon.vertices, closed=True, edgecolor='white', fill=False)
+        ax.add_patch(patch)
         ax.annotate(hexagon.name, xy=hexagon.centre, ha='center', va='center', color='white')   
     
     #plot background
@@ -230,20 +233,17 @@ def plot_sed(hexagons, frequencies):
     for hexagon in hexagons:
         flux_values = []
         flux_errors = []
-        print(hexagon.fluxes)
         for (flux, error) in hexagon.fluxes:
             flux_values.append(flux)
             flux_errors.append(error)
 
-        print("size of flux",len(flux_values))
-        print("size of err",len(flux_errors))
-        print("size of freq", len(frequencies))
-        plt.errorbar(frequencies, flux_values, yerr=flux_errors, fmt='o', label=f'Hexagon {hexagon.name}')
+        plt.errorbar(frequencies, flux_values, yerr=flux_errors, fmt='o', label=f'Hex {hexagon.name}')
     
     plt.xlabel('Frequency (Hz)')
     plt.ylabel('Integrated Flux (Jy)')
     plt.legend()
     plt.yscale('log')
+    plt.xscale('log')
     plt.grid(True)
     plt.savefig("sed_plot.png")
     plt.show()
