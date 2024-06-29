@@ -207,7 +207,7 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
 def plotPolygons(region, hexagons, wcs, data, bkg_polygon): 
     fig = plt.figure(figsize=(8,8))
     ax = fig.add_subplot(1,1,1,projection=wcs)
-    im=ax.imshow(data, cmap='gray')
+    im=ax.imshow(data, cmap='hot')
 
     ax.add_patch(region)
 
