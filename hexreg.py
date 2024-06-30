@@ -219,6 +219,7 @@ def plotPolygons(region, hexagons, wcs, data, bkg_polygon):
     #plot background
     bkg_patch = MtPltPolygon(bkg_polygon.exterior.coords, closed=True, edgecolor='blue', fill=False)
     ax.add_patch(bkg_patch)
+    ax.grid(color='white', ls='dotted')
 
     plt.xlabel('RA')
     plt.ylabel('DEC')
