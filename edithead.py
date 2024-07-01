@@ -1,7 +1,7 @@
 from astropy.io import fits
 
-original_file = '../fits/J01445_NVSS_corrected.fits'
-new_file = '../fits/J01445_NVSS_corrected2.fits'
+original_file = '../J01445/J01445_TGSS_corrected.fits'
+new_file = '../fits/J01445_TGSS_corrected.fits'
 
 with fits.open(original_file, mode='update') as hdul:
     header = hdul[0].header
@@ -12,7 +12,7 @@ with fits.open(original_file, mode='update') as hdul:
     header['CDELT2'] = pixel_scale_deg
     
     # Add the RESTFRQ header attribute
-    rest_frequency_hz = 1.4e9
+    rest_frequency_hz = 150.e6
     header['RESTFRQ'] = rest_frequency_hz
     
     hdul.writeto(new_file, overwrite=True)
