@@ -154,20 +154,18 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     npix_bkg=0
     bkg_flux_values = []
     bkg_pixels = []
-    min_x, min_y = data.shape[1], data.shape[0]
-    max_x, max_y = 1, 1
+    max_x, max_y = data.shape[1], data.shape[0]
+    min_x, min_y = 1, 1
     print(min_x,min_y,max_x,max_y)
-    for y in range(min_y, max_y):
-        print(y)
-        for x in range(min_x, max_x):
-            #point = Point(x,y)
-            print(x,y)
+    for y in range(math.ceil(min_y), math.floor(max_y)):
+        for x in range(math.ceil(min_x), math.floor(max_x)):
+            point = Point(x,y)
             #corners
-            #if all(not poly.contains(point) for poly in source_polygons) and not np.isnan(data[y - 1, x - 1]):
+            if all(not poly.contains(point) for poly in source_polygons) and not np.isnan(data[y - 1, x - 1]):
              #   print(x,y) 
-             #   bkg_flux_values.append(data[y-1,x-1])
-             #   npix_bkg+=1
-             #   bkg_pixels.append((x, y))
+                bkg_flux_values.append(data[y-1,x-1])
+                npix_bkg+=1
+                bkg_pixels.append((x, y))
 
     bkg_flux = np.mean(bkg_flux_values)
     std_bkg = np.std(bkg_flux_values)
@@ -228,7 +226,7 @@ def plotPolygons(region, hexagons, wcs, data, source_polygons):
     
     #plot background
     for poly in source_polygons:
-        bkg_patch = MtPltPolygon(bkg_polygon.exterior.coords, closed=True, edgecolor='blue', fill=False)
+        bkg_patch = MtPltPolygon(poly.exterior.coords, closed=True, edgecolor='blue', fill=False)
         ax.add_patch(bkg_patch)
     
     ax.grid(color='white', ls='dotted')
