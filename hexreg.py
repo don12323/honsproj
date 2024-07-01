@@ -236,11 +236,23 @@ def plotPolygons(region, hexagons, wcs, data, source_polygons):
     
     #plot and save fig    
     plt.savefig("hex_grid_1.png")
-    plt.show()
+#    plt.show()
 
 
 
 def plot_sed(hexagons, frequencies):
+    plt.rcParams.update({
+       	'text.usetex': True,
+       	'font.family': 'serif',
+       	'font.serif': 'Computer Modern',
+       	'axes.titlesize': 14,
+        'axes.labelsize': 12,
+        'xtick.labelsize': 10,
+        'ytick.labelsize': 10,
+        'legend.fontsize': 10,
+        'legend.title_fontsize': 12
+    })
+    plt.figure(figsize=(10, 6))
     for hexagon in hexagons:
         flux_values = []
         flux_errors = []
@@ -248,14 +260,18 @@ def plot_sed(hexagons, frequencies):
             flux_values.append(flux)
             flux_errors.append(error)
 
-        plt.errorbar(frequencies, flux_values, yerr=flux_errors, fmt='o', label=f'Hex {hexagon.name}')
+        plt.errorbar(frequencies, flux_values, yerr=flux_errors, fmt='o', label=f'Hex {hexagon.name}', capsize=5, markersize=5)
     
+    
+    
+
     plt.xlabel('Frequency (Hz)')
     plt.ylabel('Integrated Flux (Jy)')
     plt.legend()
     plt.yscale('log')
     plt.xscale('log')
-    plt.grid(True)
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+    plt.tight_layout()
     plt.savefig("sed_plot.png")
     plt.show()
 
@@ -293,7 +309,7 @@ if __name__ == "__main__":
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
     
-    reg_file = 'toplobe.reg'
+    reg_file = 'botlobe.reg'
     bkg_file = 'bkg.reg'
     
     #reg_file = '../data/reg1_deg_icrs.reg'
