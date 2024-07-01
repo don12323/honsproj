@@ -140,25 +140,34 @@ def polygons(reg_file, header, width, pix1, hexagons):
 def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     #read in background polygon in image coordinates
     bkg_regions = pyregion.open(bkg_file).as_imagecoord(header=header)
-    bkg_coords = []
+    #print(bkg_regions)
+    source_polygons = []
     for region in bkg_regions:
+        poly_coords = []
         for i in range(0, len(region.coord_list), 2):
-            bkg_coords.append((region.coord_list[i], region.coord_list[i+1]))
+            poly_coords.append((region.coord_list[i], region.coord_list[i + 1]))
+        source_polygons.append(Polygon(poly_coords))
 
-    bkg_polygon = Polygon(bkg_coords)
-    
+    print(source_polygons)
+
     #calculate the mean background flux
     npix_bkg=0
     bkg_flux_values = []
     bkg_pixels = []
-    min_x, min_y, max_x, max_y = bkg_polygon.bounds
-    for y in range(math.ceil(min_y)-1, math.floor(max_y)+1):
-        for x in range(math.ceil(min_x)-1, math.floor(max_x)+1):
+    min_x, min_y = data.shape[1], data.shape[0]
+    max_x, max_y = 1, 1
+    print(min_x,min_y,max_x,max_y)
+    for y in range(min_y, max_y):
+        print(y)
+        for x in range(min_x, max_x):
+            #point = Point(x,y)
+            print(x,y)
             #corners
-            if bkg_polygon.contains(Point(x,y)):
-                bkg_flux_values.append(data[y-1,x-1])
-                npix_bkg+=1
-                bkg_pixels.append((x, y))
+            #if all(not poly.contains(point) for poly in source_polygons) and not np.isnan(data[y - 1, x - 1]):
+             #   print(x,y) 
+             #   bkg_flux_values.append(data[y-1,x-1])
+             #   npix_bkg+=1
+             #   bkg_pixels.append((x, y))
 
     bkg_flux = np.mean(bkg_flux_values)
     std_bkg = np.std(bkg_flux_values)
@@ -202,10 +211,10 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     for hexagon, flux, uncertainty in zip(hexagons, total_fluxes, uncertainties):
         print(f"   Hexagon {hexagon.name}: Integrated Flux = {flux*10**3:.4f} +\- {uncertainty*10**3:.6f} mJy, ")
 
-    return bkg_polygon
+    return source_polygons
  
 
-def plotPolygons(region, hexagons, wcs, data, bkg_polygon): 
+def plotPolygons(region, hexagons, wcs, data, source_polygons): 
     fig = plt.figure(figsize=(8,8))
     ax = fig.add_subplot(1,1,1,projection=wcs)
     im=ax.imshow(data, cmap='hot')
@@ -218,8 +227,10 @@ def plotPolygons(region, hexagons, wcs, data, bkg_polygon):
         ax.annotate(hexagon.name, xy=hexagon.centre, ha='center', va='center', color='white')   
     
     #plot background
-    bkg_patch = MtPltPolygon(bkg_polygon.exterior.coords, closed=True, edgecolor='blue', fill=False)
-    ax.add_patch(bkg_patch)
+    for poly in source_polygons:
+        bkg_patch = MtPltPolygon(bkg_polygon.exterior.coords, closed=True, edgecolor='blue', fill=False)
+        ax.add_patch(bkg_patch)
+    
     ax.grid(color='white', ls='dotted')
 
     plt.xlabel('RA')
