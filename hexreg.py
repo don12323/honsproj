@@ -137,6 +137,7 @@ def polygons(reg_file, header, width, pix1, hexagons):
 
     
 def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
+    #TODO there's a jump down in frequency when switching to the zoomed out images-probs gets fixed when you regrid everything
     #read in background polygon in image coordinates
     bkg_regions = pyregion.open(bkg_file).as_imagecoord(header=header)
     bkg_coords = []
