@@ -15,6 +15,8 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 from astropy.utils.exceptions import AstropyWarning
 
+from sf.synchrofit import spectral_fitter, spectral_model
+
 import warnings
 import sys
 #ignore warnings from wcs
@@ -249,6 +251,28 @@ def plot_sed(hexagons, frequencies):
     plt.savefig("sed_plot.png")
     plt.show()
 
+def fit_spectra(hexagons, frequencies):
+    results = []
+    for hexagon in hexagons:
+        flux_values = [flux for flux, _ in hexagon.fluxes]
+        flux_errors = [error for _, error in hexagon.fluxes]
+
+        fit_result = spectral_fitter(
+                frequency=frequencies,
+                luminosity=flux_values,
+                dluminosity=flux_errors,
+                fit_type='TJP',
+                n_breaks=31,
+                break_range=[8, 11],
+                n_injects=31,
+                inject_range=[2.01, 2.99],
+                n_iterations=3,
+                b_field=0.35e-9,
+                redshift=0.1
+        )
+        results.append(fit_result)
+        print(f"Hexagon {hexagon.name}: Injection Index = {fit_result[2]} ± {fit_result[3]}")
+    return results
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Hexagonal grid flux measurement")
@@ -286,6 +310,11 @@ if __name__ == "__main__":
     #plot sed for each hex
     print(frequencies)
     plot_sed(hexagons, frequencies)
+    
+    # Fit spectra for each hexagon and calculate injection index
+    fit_results = fit_spectra(hexagons, frequencies)
+    for result in fit_results:
+        print(result)
 
 
 
