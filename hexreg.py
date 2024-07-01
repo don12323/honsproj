@@ -81,7 +81,6 @@ def extract_header_data(filename):
         barea = np.pi*bmaj*bmin/(4.0*np.log(2))
         npixpb = barea/(abs(pixd1*pixd2))
         print(f"   Beam area: {barea*3600**2:.2f} arcsec^2")        
-        print(f"   NAXIS: {naxis}")
         print(f"   Number of pixels per beam: {npixpb}\n")
 
         wcs = WCS(header, naxis= naxis)
@@ -257,7 +256,7 @@ def fit_spectra(hexagons, frequencies):
         flux_values = [flux for flux, _ in hexagon.fluxes]
         flux_errors = [error for _, error in hexagon.fluxes]
 
-        fit_result = spectral_fitter(
+        params = spectral_fitter(
                 frequency=frequencies,
                 luminosity=flux_values,
                 dluminosity=flux_errors,
@@ -270,8 +269,8 @@ def fit_spectra(hexagons, frequencies):
                 b_field=0.35e-9,
                 redshift=0.1
         )
-        results.append(fit_result)
-        print(f"Hexagon {hexagon.name}: Injection Index = {fit_result[2]} ± {fit_result[3]}")
+        results.append(params)
+        print(f"Hexagon {hexagon.name}: Injection Index = {params[3]} +/- {params[4]}")
     return results
 
 if __name__ == "__main__":
@@ -312,9 +311,9 @@ if __name__ == "__main__":
     plot_sed(hexagons, frequencies)
     
     # Fit spectra for each hexagon and calculate injection index
-    fit_results = fit_spectra(hexagons, frequencies)
-    for result in fit_results:
-        print(result)
+    #fit_results = fit_spectra(hexagons, frequencies)
+    #for result in fit_results:
+#        print(result)
 
 
 
