@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import math
 import argparse
+import random
+import matplotlib.mlab as mlab
 
 from matplotlib.patches import RegularPolygon
 from matplotlib.patches import Polygon as MtPltPolygon
@@ -16,7 +18,7 @@ from astropy import units as u
 from astropy.utils.exceptions import AstropyWarning
 
 from sf.synchrofit import spectral_fitter, spectral_model
-
+from scipy.optimize import leastsq
 import warnings
 import sys
 #ignore warnings from wcs
@@ -34,11 +36,14 @@ class Colors:
     UNDERLINE = '\033[4m'
 
 class Hexagon:
+    color_list = ['#FF5733', '#33FF57', '#3357FF', '#FF33A1', '#33FFF1', '#F1FF33', '#F133FF']
     def __init__(self, name):
         self.name = name
         self.vertices = None
         self.centre = None
         self.fluxes = []
+        self.color = Hexagon.color_list.pop(0) if Hexagon.color_list else "#{:06x}".format(random.randint(0, 0xFFFFFF))
+
     def set_attributes(self, vertices, centre):
         self.vertices = vertices
         self.centre = centre
@@ -48,7 +53,7 @@ class Hexagon:
 #function for calculating hexagon vertices
 def calc_hex_vert(centre, width):
     vertices = []
-    r = width*(1/np.sqrt(3))
+    r = width*(1/np.sqrt(3))*0.99
     for n in range(0,6,1):
         x = centre[0] + r*np.cos(n*2*np.pi/6)
         y = centre[1] + r*np.sin(n*2*np.pi/6)
@@ -215,14 +220,14 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
 def plotPolygons(region, hexagons, wcs, data, source_polygons): 
     fig = plt.figure(figsize=(8,8))
     ax = fig.add_subplot(1,1,1,projection=wcs)
-    im=ax.imshow(data, cmap='hot')
+    im=ax.imshow(data, cmap='gray')
 
     ax.add_patch(region)
 
     for hexagon in hexagons:
-        patch = MtPltPolygon(hexagon.vertices, closed=True, edgecolor='white', fill=False)
+        patch = MtPltPolygon(hexagon.vertices, closed=True, edgecolor=hexagon.color, fill=False)
         ax.add_patch(patch)
-        ax.annotate(hexagon.name, xy=hexagon.centre, ha='center', va='center', color='white')   
+        ax.annotate(hexagon.name, xy=hexagon.centre, ha='center', va='center', color=hexagon.color)   
     
     #plot background
     for poly in source_polygons:
@@ -240,28 +245,21 @@ def plotPolygons(region, hexagons, wcs, data, source_polygons):
 
 
 
-def plot_sed(hexagons, frequencies):
-    plt.rcParams.update({
-       	'text.usetex': True,
-       	'font.family': 'serif',
-       	'font.serif': 'Computer Modern',
-       	'axes.titlesize': 14,
-        'axes.labelsize': 12,
-        'xtick.labelsize': 10,
-        'ytick.labelsize': 10,
-        'legend.fontsize': 10,
-        'legend.title_fontsize': 12
-    })
+def plot_sed(hexagons, frequencies, powerlaw_results):
     plt.figure(figsize=(10, 6))
-    for hexagon in hexagons:
+    for hexagon, (amp, alpha) in zip(hexagons, powerlaw_results):
         flux_values = []
-        flux_errors = []
+        #flux_errors = []
         for (flux, error) in hexagon.fluxes:
             flux_values.append(flux)
-            flux_errors.append(error)
-
-        plt.errorbar(frequencies, flux_values, yerr=flux_errors, fmt='o', label=f'Hex {hexagon.name}', capsize=5, markersize=5)
-    
+            #flux_errors.append(error)
+        plt.plot(frequencies, flux_values, 'o', label=f'Hex {hexagon.name}', color=hexagon.color)
+        #plt.errorbar(frequencies, flux_values, yerr=flux_errors, fmt='o', label=f'Hex {hexagon.name}', capsize=5, markersize=5, color=hexagon.color)
+        #fit_freqs = np.logspace(np.log10(min(frequencies)), np.log10(max(frequencies)), num=100)
+        fit_freqs = frequencies
+        #fit_fluxes = powerlaw(fit_freqs, amp, alpha)
+        fit_fluxes = (10.0 **amp) * frequencies ** alpha
+        plt.plot(fit_freqs, fit_fluxes, '-', color=hexagon.color)
     
     
 
@@ -274,29 +272,61 @@ def plot_sed(hexagons, frequencies):
     plt.tight_layout()
     plt.savefig("sed_plot.png")
     plt.show()
+  
+def WLLS(S1, f1, Serr1):
 
-def fit_spectra(hexagons, frequencies):
-    results = []
-    for hexagon in hexagons:
-        flux_values = [flux for flux, _ in hexagon.fluxes]
-        flux_errors = [error for _, error in hexagon.fluxes]
+    f = np.log10(np.array(f1))
+    S = np.log10(np.array(S1))
+    Serr = np.array(Serr1) / np.array(S1)*np.log(10)
 
-        params = spectral_fitter(
-                frequency=frequencies,
-                luminosity=flux_values,
-                dluminosity=flux_errors,
-                fit_type='TJP',
-                n_breaks=31,
-                break_range=[8, 11],
-                n_injects=31,
-                inject_range=[2.01, 2.99],
-                n_iterations=3,
-                b_field=0.35e-9,
-                redshift=0.1
-        )
-        results.append(params)
-        print(f"Hexagon {hexagon.name}: Injection Index = {params[3]} +/- {params[4]}")
-    return results
+    X = np.column_stack((np.ones_like(f), f))
+    W = np.diag(1/Serr**2)
+    XtWX = np.linalg.inv(X.T @ W @ X)
+    beta = XtWX @ X.T @ W @ S
+    r = S - X @ beta
+    df = len(f) - 2
+    sumR = np.sum(r**2)
+    sigma = sumR / df
+    beta_var = sigma * XtWX
+    stderr = np.sqrt(np.diag(beta_var))
+    return beta[0], beta[1] #, stderr
+
+def powerlaw(x, amp, index):
+    return amp * (x**index)
+
+fitfunc = lambda p, x: p[0] + p[1] * x
+errfunc = lambda p, x, y, err: (y - fitfunc(p, x)) / err
+
+def fit_powerlaw(freq_array, flux_array, flux_errors):
+    freq_array = np.array(freq_array)
+    flux_array = np.array(flux_array)
+    flux_errors = np.array(flux_errors)
+
+    log_freq = np.log10(freq_array)
+    log_flux = np.log10(flux_array)
+    log_errors = flux_errors / (flux_array * np.log(10))
+
+    pinit = [0.0, -1.5]
+    fit = leastsq(errfunc, pinit, args=(log_freq, log_flux, log_errors), full_output=1)
+    covar = fit[1]
+    if covar is not None:
+        P = fit[0]
+        residual = errfunc(P, log_freq, log_flux, log_errors)
+        chi2red = sum(np.power(residual, 2)) / (len(log_freq) - len(pinit))
+        alpha = P[1]
+        amp = 10.0**P[0]     
+        # Errors
+        err_alpha = np.sqrt(covar[1][1])
+        err_amp = np.sqrt(covar[0][0])
+    else:
+        chi2red = None
+        alpha = None
+        amp = None
+        err_alpha = None
+        err_amp = None
+    return alpha, err_alpha, amp, err_amp, chi2red
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Hexagonal grid flux measurement")
@@ -312,8 +342,6 @@ if __name__ == "__main__":
     reg_file = 'botlobe.reg'
     bkg_file = 'bkg.reg'
     
-    #reg_file = '../data/reg1_deg_icrs.reg'
-    #bkg_file = 'bkg_test.reg'
 
     frequencies = []
     hexagons=None
@@ -333,13 +361,18 @@ if __name__ == "__main__":
         print("\n")
     #plot sed for each hex
     print(frequencies)
-    plot_sed(hexagons, frequencies)
     
-    # Fit spectra for each hexagon and calculate injection index
-    #fit_results = fit_spectra(hexagons, frequencies)
-    #for result in fit_results:
-#        print(result)
+    #fit straight lines 
+    powerlaw_results = []
+    for hexagon in hexagons:
+        flux_values = [flux for flux, _ in hexagon.fluxes]
+        flux_errors = [error for _, error in hexagon.fluxes]
+        alpha, err_alpha, amp, err_amp, chi2red = fit_powerlaw(frequencies, flux_values, flux_errors)
+        print(f"Hexagon {hexagon.name}: alpha = {alpha} ± {err_alpha}, S_0 = {amp} ± {err_amp}, Chi^2_red = {chi2red}")
+        amp, alpha = WLLS(flux_values, frequencies, flux_errors)
+        print(f"WLLS: Hexagon {hexagon.name}: alpha = {alpha}, amp = {10 ** amp}")
+        powerlaw_results.append((amp, alpha))
 
-
-
+    
+    plot_sed(hexagons, frequencies, powerlaw_results)
 
