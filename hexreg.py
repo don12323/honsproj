@@ -17,8 +17,6 @@ from astropy.coordinates import SkyCoord
 from astropy import units as u
 from astropy.utils.exceptions import AstropyWarning
 
-from sf.synchrofit import spectral_fitter, spectral_model
-from scipy.optimize import leastsq
 import warnings
 import sys
 #ignore warnings from wcs
@@ -153,7 +151,6 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
             poly_coords.append((region.coord_list[i], region.coord_list[i + 1]))
         source_polygons.append(Polygon(poly_coords))
 
-    print(source_polygons)
 
     #calculate the mean background flux
     npix_bkg=0
@@ -161,7 +158,6 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     bkg_pixels = []
     max_x, max_y = data.shape[1], data.shape[0]
     min_x, min_y = 1, 1
-    print(min_x,min_y,max_x,max_y)
     for y in range(math.ceil(min_y), math.floor(max_y)):
         for x in range(math.ceil(min_x), math.floor(max_x)):
             point = Point(x,y)
@@ -245,24 +241,25 @@ def plotPolygons(region, hexagons, wcs, data, source_polygons):
 
 
 
-def plot_sed(hexagons, frequencies, powerlaw_results):
+def plot_sed(hexagons, frequencies):
     plt.figure(figsize=(10, 6))
-    for hexagon, (amp, alpha) in zip(hexagons, powerlaw_results):
+    for hexagon in hexagons:
         flux_values = []
-        #flux_errors = []
+        flux_errors = []
         for (flux, error) in hexagon.fluxes:
             flux_values.append(flux)
-            #flux_errors.append(error)
+            flux_errors.append(error)
+        amp, alpha, damp ,dalpha = WLLS(flux_values, frequencies, flux_errors)
         plt.plot(frequencies, flux_values, 'o', label=f'Hex {hexagon.name}', color=hexagon.color)
         #plt.errorbar(frequencies, flux_values, yerr=flux_errors, fmt='o', label=f'Hex {hexagon.name}', capsize=5, markersize=5, color=hexagon.color)
         #fit_freqs = np.logspace(np.log10(min(frequencies)), np.log10(max(frequencies)), num=100)
-        fit_freqs = frequencies
         #fit_fluxes = powerlaw(fit_freqs, amp, alpha)
         fit_fluxes = (10.0 **amp) * frequencies ** alpha
-        plt.plot(fit_freqs, fit_fluxes, '-', color=hexagon.color)
+        chi2 = np.sum(((flux_values - fit_fluxes) / flux_errors) ** 2)
+        chi2red = chi2 / (len(frequencies) -2)
+        print(f"WLLS: Hex {hexagon.name}: alpha = {alpha} ± {dalpha}, amp = {10 ** amp} ± {10 ** damp}, chi2red = {chi2red}")
+        plt.plot(frequencies, fit_fluxes, '-', color=hexagon.color)
     
-    
-
     plt.xlabel('Frequency (Hz)')
     plt.ylabel('Integrated Flux (Jy)')
     plt.legend()
@@ -289,43 +286,7 @@ def WLLS(S1, f1, Serr1):
     sigma = sumR / df
     beta_var = sigma * XtWX
     stderr = np.sqrt(np.diag(beta_var))
-    return beta[0], beta[1] #, stderr
-
-def powerlaw(x, amp, index):
-    return amp * (x**index)
-
-fitfunc = lambda p, x: p[0] + p[1] * x
-errfunc = lambda p, x, y, err: (y - fitfunc(p, x)) / err
-
-def fit_powerlaw(freq_array, flux_array, flux_errors):
-    freq_array = np.array(freq_array)
-    flux_array = np.array(flux_array)
-    flux_errors = np.array(flux_errors)
-
-    log_freq = np.log10(freq_array)
-    log_flux = np.log10(flux_array)
-    log_errors = flux_errors / (flux_array * np.log(10))
-
-    pinit = [0.0, -1.5]
-    fit = leastsq(errfunc, pinit, args=(log_freq, log_flux, log_errors), full_output=1)
-    covar = fit[1]
-    if covar is not None:
-        P = fit[0]
-        residual = errfunc(P, log_freq, log_flux, log_errors)
-        chi2red = sum(np.power(residual, 2)) / (len(log_freq) - len(pinit))
-        alpha = P[1]
-        amp = 10.0**P[0]     
-        # Errors
-        err_alpha = np.sqrt(covar[1][1])
-        err_amp = np.sqrt(covar[0][0])
-    else:
-        chi2red = None
-        alpha = None
-        amp = None
-        err_alpha = None
-        err_amp = None
-    return alpha, err_alpha, amp, err_amp, chi2red
-
+    return beta[0], beta[1] , stderr[0], stderr[1]
 
 
 if __name__ == "__main__":
@@ -361,18 +322,5 @@ if __name__ == "__main__":
         print("\n")
     #plot sed for each hex
     print(frequencies)
-    
-    #fit straight lines 
-    powerlaw_results = []
-    for hexagon in hexagons:
-        flux_values = [flux for flux, _ in hexagon.fluxes]
-        flux_errors = [error for _, error in hexagon.fluxes]
-        alpha, err_alpha, amp, err_amp, chi2red = fit_powerlaw(frequencies, flux_values, flux_errors)
-        print(f"Hexagon {hexagon.name}: alpha = {alpha} ± {err_alpha}, S_0 = {amp} ± {err_amp}, Chi^2_red = {chi2red}")
-        amp, alpha = WLLS(flux_values, frequencies, flux_errors)
-        print(f"WLLS: Hexagon {hexagon.name}: alpha = {alpha}, amp = {10 ** amp}")
-        powerlaw_results.append((amp, alpha))
-
-    
-    plot_sed(hexagons, frequencies, powerlaw_results)
+    plot_sed(hexagons, frequencies)
 
