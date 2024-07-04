@@ -213,10 +213,10 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     for hexagon, flux, uncertainty in zip(hexagons, total_fluxes, uncertainties):
         print(f"   Hexagon {hexagon.name}: Integrated Flux = {flux*10**3:.4f} +\- {uncertainty*10**3:.6f} mJy, ")
 
-    return source_polygons, rms_bkg
+    return source_polygons, rms_bkg, bkg_pixels
  
 
-def plotPolygons(region, hexagons, wcs, data, source_polygons, rms): 
+def plotPolygons(region, hexagons, wcs, data, source_polygons, rms, bkg_pixels): 
     fig = plt.figure(figsize=(8,8))
     ax = fig.add_subplot(1,1,1,projection=wcs)
     im=ax.imshow(data, cmap='gray')
@@ -236,6 +236,9 @@ def plotPolygons(region, hexagons, wcs, data, source_polygons, rms):
         bkg_patch = MtPltPolygon(poly.exterior.coords, closed=True, edgecolor='blue', fill=False)
         ax.add_patch(bkg_patch)
     
+    #plot bkgpixels
+    bkg_x, bkg_y = zip(*bkg_pixels)
+    ax.plot(bkg_x, bkg_y, 'ro', markersize=1)
     ax.grid(color='white', ls='dotted')
 
     plt.xlabel('RA')
@@ -318,13 +321,13 @@ if __name__ == "__main__":
         data, wcs, header, pixd1, pixd2, barea, freq = extract_header_data(f)
         poly_pix, hexagons = polygons(reg_file, header, width, pixd1, hexagons)
         #measure flux in each hexagon
-        bkg_polygon, rms_bkg = measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
+        bkg_polygon, rms_bkg, bkg_pixels = measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
         
         frequencies.append(freq)
 
         #plotting
         region = MtPltPolygon(poly_pix, closed=True, edgecolor='r', linewidth=1, fill=False)
-        plotPolygons(region, hexagons, wcs, data, bkg_polygon, rms_bkg) 
+        plotPolygons(region, hexagons, wcs, data, bkg_polygon, rms_bkg, bkg_pixels) 
         print("\n")
     #plot sed for each hex
     print(frequencies)
