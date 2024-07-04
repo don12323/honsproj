@@ -306,7 +306,7 @@ if __name__ == "__main__":
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
     
-    reg_file = 'botlobe.reg'
+    reg_file = 'toplobe.reg'
     bkg_file = 'bkg.reg'
     
 
