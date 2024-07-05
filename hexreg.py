@@ -201,7 +201,7 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
 
         #calculate the integrated flux
         print(f"   Number of pixels in hex {hexagon.name}: {npix_hex} Aperture size: {npix_hex*pixarea*3600**2:.2f} arcsec^2")
-        int_flux = (total_flux_in_hex * pixarea / barea) - (bkg_flux * npix_hex * pixarea / barea) #bkg_flux*(nbeams inside hex)
+        int_flux = (total_flux_in_hex * pixarea / barea) #-TODO (bkg_flux * npix_hex * pixarea / barea) #bkg_flux*(nbeams inside hex)
         total_fluxes.append(int_flux)
         #uncertainties
         rms = np.sqrt(np.mean(np.array(flux_squared)))
@@ -222,7 +222,7 @@ def plotPolygons(region, hexagons, wcs, data, source_polygons, rms, bkg_pixels):
     im=ax.imshow(data, cmap='gray')
 
     #contours
-    contour_levels = rms * np.array([-3, 3, 6, 9])
+    contour_levels = rms * np.array([-3,3,6,9]) #[-3, 3, 6, 9]
     contours = ax.contour(data, levels=contour_levels, colors='white', linewidths=0.5, linestyles='dashed')
     ax.add_patch(region)
 
@@ -237,8 +237,8 @@ def plotPolygons(region, hexagons, wcs, data, source_polygons, rms, bkg_pixels):
         ax.add_patch(bkg_patch)
     
     #plot bkgpixels
-    bkg_x, bkg_y = zip(*bkg_pixels)
-    ax.plot(bkg_x, bkg_y, 'ro', markersize=1)
+    #bkg_x, bkg_y = zip(*bkg_pixels)
+   # ax.plot(bkg_x, bkg_y, 'ro', markersize=1)
     ax.grid(color='white', ls='dotted')
 
     plt.xlabel('RA')
@@ -266,7 +266,7 @@ def plot_sed(hexagons, frequencies):
         fit_fluxes = (10.0 **amp) * frequencies ** alpha
         chi2 = np.sum(((flux_values - fit_fluxes) / flux_errors) ** 2)
         chi2red = chi2 / (len(frequencies) -2)
-        print(f"WLLS: Hex {hexagon.name}: alpha = {alpha} ± {dalpha}, amp = {10 ** amp} ± {10 ** damp}, chi2red = {chi2red}")
+        print(f"WLLS: Hex {hexagon.name}: alpha = {alpha:.2f} ± {dalpha:.2f}, amp = {10 ** amp:.2f} ± {10 ** damp:.2f}, chi2red = {chi2red:.3f}")
         plt.plot(frequencies, fit_fluxes, '-', color=hexagon.color)
     
     plt.xlabel('Frequency (Hz)')
@@ -309,7 +309,7 @@ if __name__ == "__main__":
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
     
-    reg_file = 'toplobe.reg'
+    reg_file = 'botlobe.reg'
     bkg_file = 'bkg.reg'
     
 
