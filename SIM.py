@@ -44,19 +44,21 @@ def create_spectral_index_map(fits_files, output_file):
     for i in range(data_stack.shape[1]):
         for j in range(data_stack.shape[2]):
             flux_array = data_stack[:, i, j]
-            flux_errors = np.ones_like(flux_array)  # Assume uniform errors for simplicity
-            if np.any(flux_array <= 0):
-                spectral_index_map[i, j] = np.nan
-                spectral_index_error_map[i, j] = np.nan
-            else:
-                _, alpha, _, err_alpha = WLLS(flux_array, frequencies, flux_errors)
-                spectral_index_map[i, j] = alpha
-                spectral_index_error_map[i, j] = err_alpha
+            flux_errors = 0.02*np.ones_like(flux_array)  # 2% calibration error
+
+
+
+
+
+
+
+
+
 
     # Write spectral index map to a new FITS file
-    hdu = fits.PrimaryHDU(spectral_index_map, header=header)
-    hdul = fits.HDUList([hdu])
-    hdul.writeto(output_file, overwrite=True)
+    #hdu = fits.PrimaryHDU(spectral_index_map, header=header)
+    #hdul = fits.HDUList([hdu])
+    #hdul.writeto(output_file, overwrite=True)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create Spectral Index Map")

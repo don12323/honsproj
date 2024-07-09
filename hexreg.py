@@ -19,6 +19,8 @@ from astropy.utils.exceptions import AstropyWarning
 
 import warnings
 import sys
+import csv
+
 #ignore warnings from wcs
 warnings.simplefilter('ignore', AstropyWarning)
 
@@ -58,6 +60,26 @@ def calc_hex_vert(centre, width):
         vertices.append((x,y))
     return vertices
 
+def read_data(input_file):
+
+    f = []
+    S = []
+    Serr = []
+
+    with open(input_file, 'r') as file:
+        reader = csv.reader(file)
+        header = next(reader)  # Skip the header row
+        if header != ['Spectra', 'Frequency (Hz)', 'Photometry (Jy)', 'Uncertainty (Jy)']:
+            print("Invalid header format. Expected ['Spectra', 'Frequency (Hz)', 'Photometry (Jy)', 'Uncertainty (Jy)']")
+            return None, None, None
+
+        for row in reader:
+            f.append(float(row[1]))
+            S.append(float(row[2]))
+            Serr.append(float(row[3]))
+
+    return np.array(S), np.array(f), np.array(Serr)
+
 def extract_header_data(filename):
     print(f"{Colors.OKCYAN}>> Reading in FITS file: {filename}{Colors.ENDC} \n")
     with fits.open(filename) as hdu:
@@ -83,7 +105,7 @@ def extract_header_data(filename):
         
         barea = np.pi*bmaj*bmin/(4.0*np.log(2))
         npixpb = barea/(abs(pixd1*pixd2))
-        print(f"   Beam area: {barea*3600**2:.2f} arcsec^2")        
+        print(f"   Beam area: {barea*3600**2:.3f} arcsec^2")        
         print(f"   Number of pixels per beam: {npixpb}\n")
 
         wcs = WCS(header, naxis= naxis)
@@ -222,7 +244,7 @@ def plotPolygons(region, hexagons, wcs, data, source_polygons, rms, bkg_pixels):
     im=ax.imshow(data, cmap='gray')
 
     #contours
-    contour_levels = rms * np.array([-3,3,6,9]) #[-3, 3, 6, 9]
+    contour_levels = rms * np.array([3,6,9]) #[-3, 3, 6, 9]
     contours = ax.contour(data, levels=contour_levels, colors='white', linewidths=0.5, linestyles='dashed')
     ax.add_patch(region)
 
@@ -268,6 +290,11 @@ def plot_sed(hexagons, frequencies):
         chi2red = chi2 / (len(frequencies) -2)
         print(f"WLLS: Hex {hexagon.name}: alpha = {alpha:.2f} ± {dalpha:.2f}, amp = {10 ** amp:.2f} ± {10 ** damp:.2f}, chi2red = {chi2red:.3f}")
         plt.plot(frequencies, fit_fluxes, '-', color=hexagon.color)
+   
+	#plot lobe1/2 
+    filename = "J01445_Lobe2.dat"
+    S, f, Serr = read_data(filename)
+    plt.plot(f,S, 'o', color='Black')
     
     plt.xlabel('Frequency (Hz)')
     plt.ylabel('Integrated Flux (Jy)')
