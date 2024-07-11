@@ -6,6 +6,7 @@
 import numpy as np
 import argparse
 from astropy.io import fits
+import matplotlib.pyplot as plt
 from astropy.wcs import WCS
 import multiprocessing as mp
 
@@ -83,6 +84,20 @@ def create_spectral_index_map(fits_files, output_file):
     hdu = fits.PrimaryHDU(spectral_index_map, header=header)
     hdul = fits.HDUList([hdu])
     hdul.writeto(output_file, overwrite=True)
+    
+    return spectral_index_map, header
+
+def plot_spectral_index_map(spectral_index_map, header):
+    plt.figure(figsize=(10, 8))
+    wcs = WCS(header)
+    ax = plt.subplot(projection=wcs)
+    im = ax.imshow(spectral_index_map, origin='lower', cmap='viridis')
+    ax.set_xlabel('RA')
+    ax.set_ylabel('DEC')
+    cbar = plt.colorbar(im, ax=ax)
+    cbar.set_label('Spectral Index')
+    plt.title('Spectral Index Map')
+    plt.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create Spectral Index Map")
@@ -94,5 +109,6 @@ if __name__ == "__main__":
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
 
-    create_spectral_index_map(fits_files, args.outfits)
+    spectral_index_map, header = create_spectral_index_map(fits_files, args.outfits)
+    plot_spectral_index_map(spectral_index_map, header)
 
