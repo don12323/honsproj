@@ -231,7 +231,7 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
         total_fluxes.append(int_flux)
         #uncertainties
         rms = np.sqrt(np.mean(np.array(flux_squared)))
-        uncertainty = np.sqrt(rms**2 + (0.02 * int_flux)**2 + (std_bkg * npix_hex * pixarea / barea)**2)
+        uncertainty = np.sqrt(rms**2 + (0.02 * int_flux)**2 + (std_bkg * npix_hex * pixarea / barea)**2) #TODO **IMPORTANT**check with supv if error is associated with each pix or final flux
         uncertainties.append(uncertainty)
         #add flux to hex
         hexagon.add_flux(int_flux,uncertainty)
@@ -340,7 +340,7 @@ if __name__ == "__main__":
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
     
-    reg_file = 'test.reg'
+    reg_file = 'botlobe.reg'
     bkg_file = 'bkg.reg'
     
 
