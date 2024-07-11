@@ -72,6 +72,12 @@ def create_spectral_index_map(fits_files, output_file):
     for i, j, alpha, err_alpha in results:
         spectral_index_map[i, j] = alpha
         spectral_index_error_map[i, j] = err_alpha
+    
+    #add mask
+    lower = spectral_index_map > -2.0
+    upper = spectral_index_map < -0.5
+    mask = upper & lower
+    spectral_index_map = np.where(mask, spectral_index_map, np.nan)
 
     # Write spectral index map to a new FITS file
     hdu = fits.PrimaryHDU(spectral_index_map, header=header)
