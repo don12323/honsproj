@@ -89,7 +89,11 @@ def extract_header_data(filename):
         naxis = header["NAXIS"]
         bmaj = header["BMAJ"]
         bmin = header["BMIN"]
-        freq = header["RESTFRQ"]
+        try:
+            freq = header["RESTFREQ"]
+        except KeyError:
+            freq = header["RESTFRQ"]
+
         print(f"  {Colors.OKGREEN} FREQ: {freq}Hz {Colors.ENDC}")
         if naxis != 2:
             print(f"{Colors.FAIL}Error: NAXIS is not equal to 2 for file: {filename}{Colors.ENDC}")
