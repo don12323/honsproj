@@ -1,5 +1,5 @@
 #TODO take sigma from highest frequency?? hgih freq has best res, but beam size is still the same so take contours from non-rgcv fits best res
-      #output these from hexreg.py? OR have this high freq fits file as an        input so that bkg rms can be calculated. 
+      #output these from hexreg.py? OR have this high freq fits file as an input so that bkg rms can be calculated. 
 
 #TODO mask the spectral indices
 
@@ -11,32 +11,37 @@ from astropy.wcs import WCS
 import multiprocessing as mp
 
 def WLLS(S1, f1, Serr1):
-    f = np.log10(np.array(f1))
-    S = np.log10(np.array(S1))
-    Serr = np.array(Serr1) / np.array(S1) * np.log(10)
+
+    f = np.log10(f1)
+    S = np.log10(S1)
+    Serr = Serr1 / S1 * np.log(10)
     
     X = np.column_stack((np.ones_like(f), f))
     W = np.diag(1 / Serr**2)
     XtWX = np.linalg.inv(X.T @ W @ X)
-    beta = XtWX @ X.T @ W @ S
+    beta = XtWX @ X.T @ W @ S    # (XTWX)B = XTWy
     r = S - X @ beta
     df = len(f) - 2
     sumR = np.sum(r**2)
     sigma = sumR / df
     beta_var = sigma * XtWX
     stderr = np.sqrt(np.diag(beta_var))
+    chi2red = (r.T @ W @ r) / df         
+    #fit_fluxes = (10.0 **beta[0]) * f1 ** beta[1]
+    #chi2 = np.sum(((S1 - fit_fluxes) / Serr1) ** 2)
+    #chi2red = chi2 / (len(f1) -2)
     
-    return beta[0], beta[1], stderr[0], stderr[1]
+    return beta[0], beta[1], stderr[0], stderr[1], chi2red
 
 def process_pixel(args):
     i, j, data_stack, frequencies = args
     flux_array = data_stack[:, i, j]
-    flux_errors = 0.02*flux_array        #calib error
+    flux_errors = 0.02*flux_array        # Calib error
     if np.any(flux_array <= 0):
-        return i, j, np.nan, np.nan
+        return i, j, np.nan, np.nan, np.nan
     else:
-        _, alpha, _, err_alpha = WLLS(flux_array, frequencies, flux_errors)
-        return i, j, alpha, err_alpha
+        _, alpha, _, err_alpha, chi2red = WLLS(flux_array, frequencies, flux_errors)
+        return i, j, alpha, err_alpha, chi2red
 
 def create_spectral_index_map(fits_files, output_file):
     # Read FITS files and gather data
@@ -62,7 +67,7 @@ def create_spectral_index_map(fits_files, output_file):
     # Create arrays to store the spectral index and errors
     spectral_index_map = np.zeros_like(data_stack[0])
     spectral_index_error_map = np.zeros_like(data_stack[0])
-
+    chi2red_map = np.zeros_like(data_stack[0])
     # Set up multiprocessing
     tasks = [(i, j, data_stack, frequencies) for i in range(data_stack.shape[1]) for j in range(data_stack.shape[2])]
     num_processes = mp.cpu_count()
@@ -70,45 +75,71 @@ def create_spectral_index_map(fits_files, output_file):
         results = pool.map(process_pixel, tasks)
 
     # Collect results
-    for i, j, alpha, err_alpha in results:
+    for i, j, alpha, err_alpha, chi2red in results:
         spectral_index_map[i, j] = alpha
         spectral_index_error_map[i, j] = err_alpha
+        chi2red_map[i, j] = chi2red
     
-    #add mask
+    print(f"Min SEM: {np.nanmin(spectral_index_error_map)}, Max SEM: {np.nanmax(spectral_index_error_map)} ")
+    print(f"Min chi2red: {np.nanmin(chi2red_map)}, Max chi2red: {np.nanmax(chi2red_map)}")
+    print(f"mean chi2r: {np.nanmean(chi2red_map)}, mean SEM: {np.nanmean(spectral_index_error_map)}")
+    # Add mask
     lower = spectral_index_map > -2.0
     upper = spectral_index_map < -0.5
     mask = upper & lower
     spectral_index_map = np.where(mask, spectral_index_map, np.nan)
-
+    spectral_index_error_map = np.where(mask, spectral_index_error_map, np.nan)
+    chi2red_map = np.where(mask, chi2red_map, np.nan)
     # Write spectral index map to a new FITS file
     hdu = fits.PrimaryHDU(spectral_index_map, header=header)
     hdul = fits.HDUList([hdu])
     hdul.writeto(output_file, overwrite=True)
     
-    return spectral_index_map, header
+    return spectral_index_map, spectral_index_error_map, chi2red_map, header
 
-def plot_spectral_index_map(spectral_index_map, header):
-    plt.figure(figsize=(10, 8))
-    wcs = WCS(header)
-    ax = plt.subplot(projection=wcs)
-    im = ax.imshow(spectral_index_map, origin='lower', cmap='viridis')
-    ax.set_xlabel('RA')
-    ax.set_ylabel('DEC')
-    cbar = plt.colorbar(im, ax=ax)
-    cbar.set_label('Spectral Index')
-    plt.title('Spectral Index Map')
+def plot_spectral_index_map(spectral_index_map, spectral_index_error_map, chi2red_map, header, cont_fits):
+    fig, axes = plt.subplots(1, 3, figsize=(24, 8), subplot_kw={'projection': WCS(header)})
+    ax1, ax2, ax3 = axes
+
+    with fits.open(cont_fits) as hdu:
+        contour_data = hdu[0].data
+    rms = 4.929831199803229e-05
+    levels = [3*rms, 6*rms, 15*rms, 25*rms]
+
+    im1 = ax1.imshow(spectral_index_map, origin = 'lower', cmap='gist_rainbow_r')
+    ax1.contour(contour_data, levels=levels, colors='black', linewidths=0.8, linestyles = 'dashed', transform=ax1.get_transform(WCS(header)))
+    ax1.set_title('Spectral Index Map')
+    cbar1 = plt.colorbar(im1, ax=ax1)
+    cbar1.set_label(r'$\alpha_{6GHz}$')
+
+    im2 = ax2.imshow(spectral_error_map, origin = 'lower', cmap='gist_rainbow_r')
+    ax2.contour(contour_data, levels=levels, colors='black', linewidths=0.8, linestyles = 'dashed', transform=ax2.get_transform(WCS(header)))
+    ax2.set_title('Spectral Index error Map')
+    cbar2 = plt.colorbar(im2, ax=ax2)
+    cbar2.set_label('Error')
+
+    im3 = ax3.imshow(chi2red_map, origin = 'lower', cmap = 'RdBu')
+    ax3.contour(contour_data, levels=levels, colors='black', linewidths=0.8, linestyles = 'dashed', transform=ax3.get_transform(WCS(header)))
+    ax3.set_title('Reduced Chi-square Map')
+    cbar3 = plt.colorbar(im3, ax=ax3)
+    cbar3.set_label('Chi_square')
+    for ax in axes:
+        ax.set_xlabel('RA (J2000)')
+        ax.set_ylabel('DEC (J2000)')
+    plt.tight_layout()
     plt.show()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Create Spectral Index Map")
     parser.add_argument('--infits', type=str, required=True, help="Text file containing list of FITS files")
     parser.add_argument('--outfits', type=str, required=True, help="Output FITS file for spectral index map")
+    parser.add_argument('--contour', type=str, required=True, help="FITS file for contour overlay")
     args = parser.parse_args()
 
     # Read in FITS files
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
 
-    spectral_index_map, header = create_spectral_index_map(fits_files, args.outfits)
-    plot_spectral_index_map(spectral_index_map, header)
+    spectral_index_map, spectral_error_map, chi2red_map, header = create_spectral_index_map(fits_files, args.outfits)
+    plot_spectral_index_map(spectral_index_map, spectral_error_map, chi2red_map, header, args.contour)
 

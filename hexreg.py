@@ -288,7 +288,6 @@ def plot_sed(hexagons, frequencies):
         plt.plot(frequencies, flux_values, 'o', label=f'Hex {hexagon.name}', color=hexagon.color)
         #plt.errorbar(frequencies, flux_values, yerr=flux_errors, fmt='o', label=f'Hex {hexagon.name}', capsize=5, markersize=5, color=hexagon.color)
         #fit_freqs = np.logspace(np.log10(min(frequencies)), np.log10(max(frequencies)), num=100)
-        #fit_fluxes = powerlaw(fit_freqs, amp, alpha)
         fit_fluxes = (10.0 **amp) * frequencies ** alpha
         chi2 = np.sum(((flux_values - fit_fluxes) / flux_errors) ** 2)
         chi2red = chi2 / (len(frequencies) -2)
