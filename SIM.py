@@ -100,26 +100,26 @@ def create_spectral_index_map(fits_files, output_file):
 def plot_spectral_index_map(spectral_index_map, spectral_index_error_map, chi2red_map, header, cont_fits):
     fig, axes = plt.subplots(1, 3, figsize=(24, 8), subplot_kw={'projection': WCS(header)})
     ax1, ax2, ax3 = axes
-
+    
     with fits.open(cont_fits) as hdu:
         contour_data = hdu[0].data
     rms = 4.929831199803229e-05
     levels = [3*rms, 6*rms, 15*rms, 25*rms]
 
-    im1 = ax1.imshow(spectral_index_map, origin = 'lower', cmap='gist_rainbow_r')
-    ax1.contour(contour_data, levels=levels, colors='black', linewidths=0.8, linestyles = 'dashed', transform=ax1.get_transform(WCS(header)))
+    im1 = ax1.imshow(spectral_index_map, cmap='gist_rainbow_r')
+    ax1.contour(contour_data, levels=levels, colors='gray', linewidths=1.0, linestyles = 'dashed', transform=ax1.get_transform(WCS(header)))
     ax1.set_title('Spectral Index Map')
-    cbar1 = plt.colorbar(im1, ax=ax1)
+    cbar1 = fig.colorbar(im1, ax=ax1, shrink=0.7)
     cbar1.set_label(r'$\alpha_{6GHz}$')
 
     im2 = ax2.imshow(spectral_error_map, origin = 'lower', cmap='gist_rainbow_r')
-    ax2.contour(contour_data, levels=levels, colors='black', linewidths=0.8, linestyles = 'dashed', transform=ax2.get_transform(WCS(header)))
+    ax2.contour(contour_data, levels=levels, colors='black', linewidths=1.0, linestyles = 'dashed', transform=ax2.get_transform(WCS(header)))
     ax2.set_title('Spectral Index error Map')
     cbar2 = plt.colorbar(im2, ax=ax2)
     cbar2.set_label('Error')
 
     im3 = ax3.imshow(chi2red_map, origin = 'lower', cmap = 'RdBu')
-    ax3.contour(contour_data, levels=levels, colors='black', linewidths=0.8, linestyles = 'dashed', transform=ax3.get_transform(WCS(header)))
+    ax3.contour(contour_data, levels=levels, colors='black', linewidths=1.0, linestyles = 'dashed', transform=ax3.get_transform(WCS(header)))
     ax3.set_title('Reduced Chi-square Map')
     cbar3 = plt.colorbar(im3, ax=ax3)
     cbar3.set_label('Chi_square')
