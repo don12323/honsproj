@@ -12,6 +12,19 @@ def read_dat_file(file_name):
     uncertainty = data['Uncertainty (Jy)'].values
     return frequency, photometry, uncertainty
 
+
+def plot_spectrum(frequency, photometry, uncertainty, model_data, model_data_min, model_data_max):
+    plt.errorbar(frequency, photometry, yerr=uncertainty, fmt='o', label='Observed Data')
+    plt.plot(frequency, model_data, label='Model Data', color='red')
+    plt.fill_between(frequency, model_data_min, model_data_max, color='red', alpha=0.3, label='Model Uncertainty')
+    plt.xscale('log')
+    plt.yscale('log')
+    plt.xlabel('Frequency (Hz)')
+    plt.ylabel('Flux Density (Jy)')
+    plt.legend()
+    plt.title('Spectral Fitting with CI Model')
+    plt.show()
+
 def main(file_name):
     # Read the data
     frequency, photometry, uncertainty = read_dat_file(file_name)
