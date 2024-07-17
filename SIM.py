@@ -6,8 +6,11 @@
 import numpy as np
 import argparse
 from astropy.io import fits
-import matplotlib.pyplot as plt
+from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
+import astropy.units as u
+
+import matplotlib.pyplot as plt
 import multiprocessing as mp
 
 def WLLS(S1, f1, Serr1):
@@ -97,7 +100,7 @@ def create_spectral_index_map(fits_files, output_file):
     
     return spectral_index_map, spectral_index_error_map, chi2red_map, header
 
-def plot_spectral_index_map(spectral_index_map, spectral_index_error_map, chi2red_map, header, cont_fits):
+def plot_spectral_index_map(spectral_index_map, spectral_index_error_map, chi2red_map, header, cont_fits, host_coords):
     fig, axes = plt.subplots(1, 3, figsize=(24, 8), subplot_kw={'projection': WCS(header)})
     ax1, ax2, ax3 = axes
     
@@ -107,25 +110,32 @@ def plot_spectral_index_map(spectral_index_map, spectral_index_error_map, chi2re
     levels = [3*rms, 6*rms, 15*rms, 25*rms]
 
     im1 = ax1.imshow(spectral_index_map, cmap='gist_rainbow_r')
-    ax1.contour(contour_data, levels=levels, colors='gray', linewidths=1.0, linestyles = 'dashed', transform=ax1.get_transform(WCS(header)))
+    ax1.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax1.get_transform(WCS(header)))
     ax1.set_title('Spectral Index Map')
     cbar1 = fig.colorbar(im1, ax=ax1, shrink=0.7)
     cbar1.set_label(r'$\alpha_{6GHz}$')
 
     im2 = ax2.imshow(spectral_error_map, origin = 'lower', cmap='gist_rainbow_r')
-    ax2.contour(contour_data, levels=levels, colors='black', linewidths=1.0, linestyles = 'dashed', transform=ax2.get_transform(WCS(header)))
+    ax2.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax2.get_transform(WCS(header)))
     ax2.set_title('Spectral Index error Map')
     cbar2 = plt.colorbar(im2, ax=ax2)
     cbar2.set_label('Error')
 
     im3 = ax3.imshow(chi2red_map, origin = 'lower', cmap = 'RdBu')
-    ax3.contour(contour_data, levels=levels, colors='black', linewidths=1.0, linestyles = 'dashed', transform=ax3.get_transform(WCS(header)))
+    ax3.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax3.get_transform(WCS(header)))
     ax3.set_title('Reduced Chi-square Map')
     cbar3 = plt.colorbar(im3, ax=ax3)
     cbar3.set_label('Chi_square')
     for ax in axes:
         ax.set_xlabel('RA (J2000)')
         ax.set_ylabel('DEC (J2000)')
+        #plot host galaxy
+        if host_coords is not None:
+            host_pixel_coords = WCS(header).world_to_pixel(host_coords)
+            ax.plot(host_pixel_coords[0], host_pixel_coords[1], 'x', color='black', markersize=10)
+
+
+
     plt.tight_layout()
     plt.show()
 
@@ -134,12 +144,19 @@ if __name__ == "__main__":
     parser.add_argument('--infits', type=str, required=True, help="Text file containing list of FITS files")
     parser.add_argument('--outfits', type=str, required=True, help="Output FITS file for spectral index map")
     parser.add_argument('--contour', type=str, required=True, help="FITS file for contour overlay")
+    parser.add_argument('--host_ra', type=float, help="RA of the host galaxy")
+    parser.add_argument('--host_dec', type=float, help="DEC of the host galaxy")
+
     args = parser.parse_args()
 
     # Read in FITS files
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
+    
+    host_coords = None
+    if args.host_ra is not None and args.host_dec is not None:
+        host_coords = SkyCoord(ra=args.host_ra * u.deg, dec=args.host_dec * u.deg, frame='icrs')
 
     spectral_index_map, spectral_error_map, chi2red_map, header = create_spectral_index_map(fits_files, args.outfits)
-    plot_spectral_index_map(spectral_index_map, spectral_error_map, chi2red_map, header, args.contour)
+    plot_spectral_index_map(spectral_index_map, spectral_error_map, chi2red_map, header, args.contour, host_coords)
 
