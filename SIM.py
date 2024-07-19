@@ -1,11 +1,4 @@
-#/usr/bin/env python3
-
-#TODO take sigma from highest frequency?? hgih freq has best res, but beam size is still the same so take contours from non-rgcv fits best
-
-#output these from hexreg.py? OR have this high freq fits file as an input so that bkg rms can be calculated. 
-
-#TODO mask the spectral indices
-
+#!/usr/bin/env python3
 import numpy as np
 import argparse
 from astropy.io import fits
@@ -16,6 +9,11 @@ import astropy.units as u
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 
+#TODO take sigma from highest frequency?? hgih freq has best res, but beam size is still the same so take contours from non-rgcv fits best
+
+#output these from hexreg.py? OR have this high freq fits file as an input so that bkg rms can be calculated.
+
+#TODO mask the spectral indices
 def WLLS(S1, f1, Serr1):
 
     f = np.log10(f1)
@@ -113,19 +111,19 @@ def plot_spectral_index_map(spectral_index_map, spectral_index_error_map, chi2re
     levels = [3*rms, 6*rms, 15*rms, 25*rms]
 
     im1 = ax1.imshow(spectral_index_map, cmap='gist_rainbow_r')
-    ax1.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax1.get_transform(WCS(header)))
+    ax1.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax1.get_transform(WCS(header)),alpha = 0.5)
     ax1.set_title('Spectral Index Map')
     cbar1 = fig.colorbar(im1, ax=ax1, shrink=0.7)
     cbar1.set_label(r'$\alpha_{6GHz}$')
 
     im2 = ax2.imshow(spectral_error_map, origin = 'lower', cmap='gist_rainbow_r')
-    ax2.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax2.get_transform(WCS(header)))
+    ax2.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax2.get_transform(WCS(header)),alpha = 0.5)
     ax2.set_title('Spectral Index error Map')
     cbar2 = plt.colorbar(im2, ax=ax2)
     cbar2.set_label('Error')
 
     im3 = ax3.imshow(chi2red_map, origin = 'lower', cmap = 'RdBu')
-    ax3.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax3.get_transform(WCS(header)))
+    ax3.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax3.get_transform(WCS(header)), alpha = 0.5)
     ax3.set_title('Reduced Chi-square Map')
     cbar3 = plt.colorbar(im3, ax=ax3)
     cbar3.set_label('Chi_square')

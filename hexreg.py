@@ -18,6 +18,7 @@ from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 from astropy.utils.exceptions import AstropyWarning
+from astropy.visualization import wcsaxes
 
 import warnings
 import sys
@@ -245,7 +246,7 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     return source_polygons, rms_bkg, bkg_pixels
  
 
-def plotPolygons(region, hexagons, wcs, data, source_polygons, rms, bkg_pixels): 
+def plotPolygons(region, hexagons, wcs, header, data, source_polygons, rms, bkg_pixels): 
     fig = plt.figure(figsize=(8,8))
     ax = fig.add_subplot(1,1,1,projection=wcs)
     im=ax.imshow(data, cmap='gray')
@@ -268,6 +269,9 @@ def plotPolygons(region, hexagons, wcs, data, source_polygons, rms, bkg_pixels):
     #plot bkgpixels
     #bkg_x, bkg_y = zip(*bkg_pixels)
    # ax.plot(bkg_x, bkg_y, 'ro', markersize=1)
+    wcsaxes.add_beam(ax, header = header)
+    wcsaxes.add_scalebar(ax, 0.00396162)
+
     ax.grid(color='white', ls='dotted')
 
     plt.xlabel('RA')
@@ -360,7 +364,7 @@ if __name__ == "__main__":
 
         #plotting
         region = MtPltPolygon(poly_pix, closed=True, edgecolor='r', linewidth=1, fill=False)
-        plotPolygons(region, hexagons, wcs, data, bkg_polygon, rms_bkg, bkg_pixels) 
+        plotPolygons(region, hexagons, wcs, header, data, bkg_polygon, rms_bkg, bkg_pixels) 
         print("\n")
     #plot sed for each hex
     print(frequencies)
