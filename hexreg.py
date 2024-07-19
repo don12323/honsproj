@@ -1,3 +1,5 @@
+#!/usr/bin/env python3 
+
 import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
@@ -235,6 +237,7 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
         uncertainties.append(uncertainty)
         #add flux to hex
         hexagon.add_flux(int_flux,uncertainty)
+        print(f"bkg tot flux in hex: {bkg_flux * npix_hex * pixarea / barea}")
 
     for hexagon, flux, uncertainty in zip(hexagons, total_fluxes, uncertainties):
         print(f"   Hexagon {hexagon.name}: Integrated Flux = {flux*10**3:.4f} +\- {uncertainty*10**3:.6f} mJy, ")
@@ -294,8 +297,8 @@ def plot_sed(hexagons, frequencies):
         print(f"WLLS: Hex {hexagon.name}: alpha = {alpha:.2f} ± {dalpha:.2f}, amp = {10 ** amp:.2f} ± {10 ** damp:.2f}, chi2red = {chi2red:.3f}")
         plt.plot(frequencies, fit_fluxes, '-', color=hexagon.color)
    
-	#plot lobe1/2 
-    filename = "J01445_Lobe2.dat"
+	#plot lobe1/2 or total 
+    filename = "test.dat"
     S, f, Serr = read_data(filename)
     plt.plot(f,S, 'o', color='Black')
     

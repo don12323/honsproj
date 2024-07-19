@@ -1,5 +1,8 @@
-#TODO take sigma from highest frequency?? hgih freq has best res, but beam size is still the same so take contours from non-rgcv fits best res
-      #output these from hexreg.py? OR have this high freq fits file as an input so that bkg rms can be calculated. 
+#/usr/bin/env python3
+
+#TODO take sigma from highest frequency?? hgih freq has best res, but beam size is still the same so take contours from non-rgcv fits best
+
+#output these from hexreg.py? OR have this high freq fits file as an input so that bkg rms can be calculated. 
 
 #TODO mask the spectral indices
 
