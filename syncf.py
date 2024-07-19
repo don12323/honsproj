@@ -52,6 +52,8 @@ def plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, p
     ax.set_ylabel(r'Flux Density (Jy)')
     ax.tick_params(axis="both", which="major", direction="in", length=5, width=2, pad=5)
     ax.tick_params(axis="both", which="minor", direction="in", length=3, width=2)
+    for spine in ax.spines.values():
+        spine.set_linewidth(2)
  #   ax.grid(True)
     str2 = r'$\alpha_{inj} = $'
     str1 = r'$\nu_b$ = '
@@ -75,7 +77,25 @@ def plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, p
 def main(file_name):
     # Read the data
     obsname, frequency, photometry, uncertainty = read_dat_file(file_name)
+    #calculate Beq
+    p = 0.5
+    alpha_thin = -1.1
+    nu_peak =7.510961461177
+    S_peak=0.038872512411101165 
+    theta_src_min =  21.9767
+    theta_src_max = 30.476
+    z = 0.366972
 
+
+    X_p = ((10**(p+alpha_thin))-(nu_peak**(p+alpha_thin)))/(p+alpha_thin)
+    redshift_part = ((1+1)/1)*((1+z)**(3+alpha_thin))
+    source_size_part = 1/(theta_src_min*theta_src_max*theta_src_max)
+    freq_flux_part = S_peak/(nu_peak**(-alpha_thin))
+    B_eq = 5.69e-5 * (redshift_part * source_size_part * freq_flux_part * X_p)**(2/7) 
+
+    B_eq = B_eq / 1e4
+
+    print("Beq is :",B_eq,"nT")
     fit_type = 'CI' 
     params, _, _, _, _, _= spectral_fitter(frequency, photometry, uncertainty, fit_type)
     
@@ -97,7 +117,7 @@ def main(file_name):
     #ages
 
     params_ages = (params[0], 10**params[1], params[5])
-    ages = spectral_ages(params_ages, 0.35e-9, 0.366972)
+    ages = spectral_ages(params_ages, B_eq, z)
 
     plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, params, ages)
 
@@ -105,6 +125,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fit synchrotron spectrum to radio data")
     parser.add_argument("file_name", type=str, help="Name of the data file (.dat format)")
     
+    
+
     args = parser.parse_args()
     main(args.file_name)
 
