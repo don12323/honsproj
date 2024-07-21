@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 import multiprocessing as mp
 
 #style
+plt.style.use('seaborn-v0_8-bright')
 plt.rcParams["font.family"] = "serif"
 plt.rcParams["axes.grid"] = False
 
@@ -143,6 +144,7 @@ def plot_spectral_index_map(spectral_index_map, spectral_index_error_map, chi2re
 
 
     plt.tight_layout()
+    plt.savefig('SIM.png')
     plt.show()
 
 if __name__ == "__main__":
