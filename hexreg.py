@@ -1,6 +1,5 @@
 #!/usr/bin/env python3 
 
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 import math
@@ -23,6 +22,11 @@ from astropy.visualization import wcsaxes
 import warnings
 import sys
 import csv
+
+#style
+plt.style.use('seaborn-v0_8-bright')
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["axes.grid"] = False
 
 #ignore warnings from wcs
 warnings.simplefilter('ignore', AstropyWarning)
@@ -292,12 +296,13 @@ def plot_sed(hexagons, frequencies):
             flux_values.append(flux)
             flux_errors.append(error)
         amp, alpha, damp ,dalpha = WLLS(flux_values, frequencies, flux_errors)
-        plt.plot(frequencies, flux_values, 'o', label=f'Hex {hexagon.name}', color=hexagon.color)
         #plt.errorbar(frequencies, flux_values, yerr=flux_errors, fmt='o', label=f'Hex {hexagon.name}', capsize=5, markersize=5, color=hexagon.color)
         #fit_freqs = np.logspace(np.log10(min(frequencies)), np.log10(max(frequencies)), num=100)
         fit_fluxes = (10.0 **amp) * frequencies ** alpha
         chi2 = np.sum(((flux_values - fit_fluxes) / flux_errors) ** 2)
         chi2red = chi2 / (len(frequencies) -2)
+        
+        plt.plot(frequencies, flux_values, 'o', label=f'Hex {hexagon.name} alph = {alpha:.2f} ± {dalpha:.2f}, chi2red = {chi2red:.3f}', color=hexagon.color)
         print(f"WLLS: Hex {hexagon.name}: alpha = {alpha:.2f} ± {dalpha:.2f}, amp = {10 ** amp:.2f} ± {10 ** damp:.2f}, chi2red = {chi2red:.3f}")
         plt.plot(frequencies, fit_fluxes, '-', color=hexagon.color)
    
