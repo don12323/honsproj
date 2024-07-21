@@ -9,6 +9,10 @@ import astropy.units as u
 import matplotlib.pyplot as plt
 import multiprocessing as mp
 
+#style
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["axes.grid"] = False
+
 #TODO take sigma from highest frequency?? hgih freq has best res, but beam size is still the same so take contours from non-rgcv fits best
 
 #output these from hexreg.py? OR have this high freq fits file as an input so that bkg rms can be calculated.
@@ -108,25 +112,26 @@ def plot_spectral_index_map(spectral_index_map, spectral_index_error_map, chi2re
     with fits.open(cont_fits) as hdu:
         contour_data = hdu[0].data
     rms = 4.929831199803229e-05
-    levels = [3*rms, 6*rms, 15*rms, 25*rms]
+    levels = [3*rms, 6*rms, 15*rms, 35*rms, 46*rms]
 
     im1 = ax1.imshow(spectral_index_map, cmap='gist_rainbow_r')
     ax1.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax1.get_transform(WCS(header)),alpha = 0.5)
     ax1.set_title('Spectral Index Map')
-    cbar1 = fig.colorbar(im1, ax=ax1, shrink=0.7)
+    cbar1 = fig.colorbar(im1, ax=ax1, shrink=0.75)
     cbar1.set_label(r'$\alpha_{6GHz}$')
 
     im2 = ax2.imshow(spectral_error_map, origin = 'lower', cmap='gist_rainbow_r')
     ax2.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax2.get_transform(WCS(header)),alpha = 0.5)
     ax2.set_title('Spectral Index error Map')
-    cbar2 = plt.colorbar(im2, ax=ax2)
+    cbar2 = plt.colorbar(im2, ax=ax2, shrink=0.75)
     cbar2.set_label('Error')
-
+    
     im3 = ax3.imshow(chi2red_map, origin = 'lower', cmap = 'RdBu')
     ax3.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax3.get_transform(WCS(header)), alpha = 0.5)
     ax3.set_title('Reduced Chi-square Map')
-    cbar3 = plt.colorbar(im3, ax=ax3)
+    cbar3 = plt.colorbar(im3, ax=ax3, shrink=0.75)
     cbar3.set_label('Chi_square')
+
     for ax in axes:
         ax.set_xlabel('RA (J2000)')
         ax.set_ylabel('DEC (J2000)')
