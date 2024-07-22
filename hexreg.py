@@ -287,7 +287,7 @@ def plotPolygons(region, hexagons, wcs, header, data, source_polygons, rms, bkg_
 
 
 
-def plot_sed(hexagons, frequencies):
+def plot_sed(hexagons, frequencies, data):
     plt.figure(figsize=(10, 6))
     for hexagon in hexagons:
         flux_values = []
@@ -307,9 +307,10 @@ def plot_sed(hexagons, frequencies):
         plt.plot(frequencies, fit_fluxes, '-', color=hexagon.color)
    
 	#plot lobe1/2 or total 
-    filename = "test.dat"
-    S, f, Serr = read_data(filename)
-    plt.plot(f,S, 'o', color='Black')
+    if data:
+        filename = data
+        S, f, Serr = read_data(filename)
+        plt.plot(f,S, 'o', color='Black', label='Total')
     
     plt.xlabel('Frequency (Hz)')
     plt.ylabel('Integrated Flux (Jy)')
@@ -344,6 +345,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Hexagonal grid flux measurement")
     parser.add_argument('--width', type=float, required=True, help="Width of the hexagons in arcseconds")
     parser.add_argument('--infits', type=str, required=True, help="Text file containing list of FITS files")
+    parser.add_argument('--data', type=str, help="File containing total flux data")
     args = parser.parse_args()
     width = args.width
 
@@ -351,7 +353,7 @@ if __name__ == "__main__":
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
     
-    reg_file = 'botlobe.reg'
+    reg_file = 'rlobe.reg'
     bkg_file = 'bkg.reg'
     
 
@@ -373,5 +375,5 @@ if __name__ == "__main__":
         print("\n")
     #plot sed for each hex
     print(frequencies)
-    plot_sed(hexagons, frequencies)
+    plot_sed(hexagons, frequencies, args.data)
 

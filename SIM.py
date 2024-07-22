@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import numpy as np
 import argparse
 from astropy.io import fits
@@ -7,6 +8,7 @@ from astropy.wcs import WCS
 import astropy.units as u
 
 import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm
 import multiprocessing as mp
 
 #style
@@ -93,8 +95,8 @@ def create_spectral_index_map(fits_files, output_file):
     print(f"Min chi2red: {np.nanmin(chi2red_map)}, Max chi2red: {np.nanmax(chi2red_map)}")
     print(f"mean chi2r: {np.nanmean(chi2red_map)}, mean SEM: {np.nanmean(spectral_index_error_map)}")
     # Add mask
-    lower = spectral_index_map > -2.0
-    upper = spectral_index_map < -0.5
+    lower = spectral_index_map > -4.0
+    upper = spectral_index_map < -0.1
     mask = upper & lower
     spectral_index_map = np.where(mask, spectral_index_map, np.nan)
     spectral_index_error_map = np.where(mask, spectral_index_error_map, np.nan)
@@ -112,7 +114,7 @@ def plot_spectral_index_map(spectral_index_map, spectral_index_error_map, chi2re
     
     with fits.open(cont_fits) as hdu:
         contour_data = hdu[0].data
-    rms = 4.929831199803229e-05
+    rms = 0.00022949875523172                  #J01445 4.929831199803229e-05
     levels = [3*rms, 6*rms, 15*rms, 35*rms, 46*rms]
 
     im1 = ax1.imshow(spectral_index_map, cmap='gist_rainbow_r')
@@ -121,13 +123,13 @@ def plot_spectral_index_map(spectral_index_map, spectral_index_error_map, chi2re
     cbar1 = fig.colorbar(im1, ax=ax1, shrink=0.75)
     cbar1.set_label(r'$\alpha_{6GHz}$')
 
-    im2 = ax2.imshow(spectral_error_map, origin = 'lower', cmap='gist_rainbow_r')
+    im2 = ax2.imshow(spectral_error_map, origin = 'lower', cmap='gist_rainbow_r', norm=LogNorm())
     ax2.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax2.get_transform(WCS(header)),alpha = 0.5)
     ax2.set_title('Spectral Index error Map')
     cbar2 = plt.colorbar(im2, ax=ax2, shrink=0.75)
     cbar2.set_label('Error')
     
-    im3 = ax3.imshow(chi2red_map, origin = 'lower', cmap = 'RdBu')
+    im3 = ax3.imshow(chi2red_map, origin = 'lower', cmap = 'RdBu', norm=LogNorm())
     ax3.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax3.get_transform(WCS(header)), alpha = 0.5)
     ax3.set_title('Reduced Chi-square Map')
     cbar3 = plt.colorbar(im3, ax=ax3, shrink=0.75)

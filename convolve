@@ -1,0 +1,64 @@
+#!/bin/bash
+
+usage()
+{
+echo This script will convolve and regrid fits images to a common resolution, or to a user-defined resolution.
+echo "convolve.sh [-i] [-t] [-b] [-l] 
+	-i input_image    : Image to be convolved and regridded.
+	-t template_image : Image to grid-match the input_image (just set to input_image if this doesn't apply)
+	-b beam_shape     : Shape of the synthesized beam in units of (arcsec,arcsec,deg): bmaj,bmin,bpa
+	-l low_res_image  : (optional) Lowest resolution image to resolution-match the input_image. Will override -b " 1>&2;
+exit 1;
+}
+
+#parse args and set options,
+while getopts ':i:t:b:l:' OPTION
+do
+	case "$OPTION" in
+		i)
+			input_image=${OPTARG}
+			;;
+		t)
+			template_image=${OPTARG}
+			;;
+		b)
+			beam=${OPTARG}
+			;;
+		l)
+			low_res_image=${OPTARG}
+			;;
+		? | : | h )
+			usage
+			;;
+	esac
+done
+
+echo Note, this code requires that all .fits files have the BPA, BMAJ, BMIN and BUNIT fits header keys.
+echo If this information isnt present, add it using "pyhead.py -u $KEY_NAME $VALUE $FITS_FILE_NAME"
+
+if [[ -e "$low_res_image" ]]; then
+	echo Obtaining lowest-resolution beam parameters
+	bmaj=`pyhead.py -p BMAJ $low_res_image | awk '{print 3600*$3}'`
+	bmin=`pyhead.py -p BMIN $low_res_image | awk '{print 3600*$3}'`
+	bpa=`pyhead.py -p BPA $low_res_image | awk '{print $3}'`
+else
+	bmaj=$(echo $beam | cut -f1 -d,)
+	bmin=$(echo $beam | cut -f2 -d,)
+	bpa=$(echo $beam | cut -f3 -d,)
+fi
+
+echo Reading in all the files ...
+fits op=xyin in=$input_image out=${input_image%.fits}.im
+fits op=xyin in=$template_image out=${template_image%.fits}.im
+
+echo Convolving the $input_image to $bmaj, $bmin, $bpa ...
+convol map=${input_image%.fits}.im fwhm=$bmaj,$bmin pa=$bpa out=${input_image%.fits}_cv.im options="final"
+
+echo Regridding $input_image to match $template_image pixel grid ...
+regrid in=${input_image%.fits}_cv.im tin=${template_image%.fits}.im axes=1,2 out=${input_image%.fits}_rgcv.im
+
+echo Exporting all .im files to .fits files ...
+fits op=xyout in=${input_image%.fits}_rgcv.im out=${input_image%.fits}_rgcv.fits
+
+echo Deleting all .im files
+rm -r **.im
