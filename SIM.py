@@ -95,17 +95,26 @@ def create_spectral_index_map(fits_files, output_file):
     print(f"Min chi2red: {np.nanmin(chi2red_map)}, Max chi2red: {np.nanmax(chi2red_map)}")
     print(f"mean chi2r: {np.nanmean(chi2red_map)}, mean SEM: {np.nanmean(spectral_index_error_map)}")
     # Add mask
-    lower = spectral_index_map > -4.0
+    lower = spectral_index_map > -2.5
     upper = spectral_index_map < -0.1
     mask = upper & lower
     spectral_index_map = np.where(mask, spectral_index_map, np.nan)
     spectral_index_error_map = np.where(mask, spectral_index_error_map, np.nan)
     chi2red_map = np.where(mask, chi2red_map, np.nan)
     # Write spectral index map to a new FITS file
-    hdu = fits.PrimaryHDU(spectral_index_map, header=header)
-    hdul = fits.HDUList([hdu])
+    #hdu = fits.PrimaryHDU(spectral_index_map, header=header)
+    #hdul = fits.HDUList([hdu])
+    #hdul.writeto(output_file, overwrite=True)
+    maps_hdu = fits.PrimaryHDU(header=header)
+
+    hdu_sim = fits.ImageHDU(spectral_index_map,header=header, name='INDEX_MAP')
+    hdu_errm = fits.ImageHDU(spectral_index_error_map, header=header, name='ERROR_MAP')
+    hdu_chi2redm = fits.ImageHDU(chi2red_map,header=header, name='CHI2RED_MAP')
+    hdu_im = fits.ImageHDU(data_stack[0], header=header, name='IMAGE')
+
+    hdul = fits.HDUList([maps_hdu, hdu_sim, hdu_errm, hdu_chi2redm, hdu_im])
     hdul.writeto(output_file, overwrite=True)
-    
+
     return spectral_index_map, spectral_index_error_map, chi2red_map, header
 
 def plot_spectral_index_map(spectral_index_map, spectral_index_error_map, chi2red_map, header, cont_fits, host_coords):
@@ -114,8 +123,14 @@ def plot_spectral_index_map(spectral_index_map, spectral_index_error_map, chi2re
     
     with fits.open(cont_fits) as hdu:
         contour_data = hdu[0].data
-    rms = 0.00022949875523172                  #J01445 4.929831199803229e-05
+    rms = 3.2323823378589636e-05                 #J01445 4.929831199803229e-05
     levels = [3*rms, 6*rms, 15*rms, 35*rms, 46*rms]
+
+    #mask the indices within 3sigma
+    mask = contour_data >= levels[0]
+    spectral_index_map = np.where(mask, spectral_index_map, np.nan)
+    spectral_index_error_map = np.where(mask, spectral_index_error_map, np.nan)
+    chi2red_map = np.where(mask, chi2red_map, np.nan)
 
     im1 = ax1.imshow(spectral_index_map, cmap='gist_rainbow_r')
     ax1.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax1.get_transform(WCS(header)),alpha = 0.5)
@@ -123,7 +138,7 @@ def plot_spectral_index_map(spectral_index_map, spectral_index_error_map, chi2re
     cbar1 = fig.colorbar(im1, ax=ax1, shrink=0.75)
     cbar1.set_label(r'$\alpha_{6GHz}$')
 
-    im2 = ax2.imshow(spectral_error_map, origin = 'lower', cmap='gist_rainbow_r', norm=LogNorm())
+    im2 = ax2.imshow(spectral_index_error_map, origin = 'lower', cmap='gist_rainbow_r', norm=LogNorm())
     ax2.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax2.get_transform(WCS(header)),alpha = 0.5)
     ax2.set_title('Spectral Index error Map')
     cbar2 = plt.colorbar(im2, ax=ax2, shrink=0.75)
