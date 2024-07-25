@@ -118,7 +118,7 @@ def create_spectral_index_map(fits_files, output_file):
     return spectral_index_map, spectral_index_error_map, chi2red_map, header
 
 def plot_spectral_index_map(spectral_index_map, spectral_index_error_map, chi2red_map, header, cont_fits, host_coords):
-    fig, axes = plt.subplots(1, 3, figsize=(24, 8), subplot_kw={'projection': WCS(header)})
+    fig, axes = plt.subplots(1, 3, figsize=(24, 8), subplot_kw={'projection': WCS(header)}) #add naxis=2?
     ax1, ax2, ax3 = axes
     
     with fits.open(cont_fits) as hdu:
