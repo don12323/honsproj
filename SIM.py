@@ -54,7 +54,7 @@ def process_pixel(args):
         _, alpha, _, err_alpha, chi2red = WLLS(flux_array, frequencies, flux_errors)
         return i, j, alpha, err_alpha, chi2red
 
-def create_spectral_index_map(fits_files, output_file):
+def create_spectral_index_map(fits_files, output_file, cont_fits, rms):
     # Read FITS files and gather data
     data_list = []
     frequencies = []
@@ -95,9 +95,12 @@ def create_spectral_index_map(fits_files, output_file):
     print(f"Min chi2red: {np.nanmin(chi2red_map)}, Max chi2red: {np.nanmax(chi2red_map)}")
     print(f"mean chi2r: {np.nanmean(chi2red_map)}, mean SEM: {np.nanmean(spectral_index_error_map)}")
     # Add mask
-    lower = spectral_index_map > -2.5
+    lower = spectral_index_map > -2.8
     upper = spectral_index_map < -0.1
-    mask = upper & lower
+    with fits.open(cont_fits) as hdu:
+        contour_data = hdu[0].data
+    sigma3 = contour_data >= 3*rms
+    mask = upper & lower & sigma3
     spectral_index_map = np.where(mask, spectral_index_map, np.nan)
     spectral_index_error_map = np.where(mask, spectral_index_error_map, np.nan)
     chi2red_map = np.where(mask, chi2red_map, np.nan)
@@ -117,35 +120,29 @@ def create_spectral_index_map(fits_files, output_file):
 
     return spectral_index_map, spectral_index_error_map, chi2red_map, header
 
-def plot_spectral_index_map(spectral_index_map, spectral_index_error_map, chi2red_map, header, cont_fits, host_coords):
-    fig, axes = plt.subplots(1, 3, figsize=(24, 8), subplot_kw={'projection': WCS(header)}) #add naxis=2?
+def plot_maps(spectral_index_map, spectral_index_error_map, chi2red_map, header, cont_fits, host_coords, rms):
+    fig, axes = plt.subplots(1, 3, figsize=(24, 8), subplot_kw={'projection': WCS(header,naxis=2)}) #add naxis=2?
     ax1, ax2, ax3 = axes
     
     with fits.open(cont_fits) as hdu:
         contour_data = hdu[0].data
-    rms = 3.2323823378589636e-05                 #J01445 4.929831199803229e-05
+    #rms = 3.2323823378589636e-05                 #J01445 4.929831199803229e-05
     levels = [3*rms, 6*rms, 15*rms, 35*rms, 46*rms]
 
-    #mask the indices within 3sigma
-    mask = contour_data >= levels[0]
-    spectral_index_map = np.where(mask, spectral_index_map, np.nan)
-    spectral_index_error_map = np.where(mask, spectral_index_error_map, np.nan)
-    chi2red_map = np.where(mask, chi2red_map, np.nan)
-
     im1 = ax1.imshow(spectral_index_map, cmap='gist_rainbow_r')
-    ax1.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax1.get_transform(WCS(header)),alpha = 0.5)
+    ax1.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax1.get_transform(WCS(header, naxis=2)),alpha = 0.5)
     ax1.set_title('Spectral Index Map')
     cbar1 = fig.colorbar(im1, ax=ax1, shrink=0.75)
     cbar1.set_label(r'$\alpha_{6GHz}$')
 
     im2 = ax2.imshow(spectral_index_error_map, origin = 'lower', cmap='gist_rainbow_r', norm=LogNorm())
-    ax2.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax2.get_transform(WCS(header)),alpha = 0.5)
+    ax2.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax2.get_transform(WCS(header,naxis=2)),alpha = 0.5)
     ax2.set_title('Spectral Index error Map')
     cbar2 = plt.colorbar(im2, ax=ax2, shrink=0.75)
     cbar2.set_label('Error')
     
-    im3 = ax3.imshow(chi2red_map, origin = 'lower', cmap = 'RdBu', norm=LogNorm())
-    ax3.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax3.get_transform(WCS(header)), alpha = 0.5)
+    im3 = ax3.imshow(chi2red_map, origin = 'lower', cmap = 'inferno', norm=LogNorm())
+    ax3.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax3.get_transform(WCS(header,naxis=2)), alpha = 0.5)
     ax3.set_title('Reduced Chi-square Map')
     cbar3 = plt.colorbar(im3, ax=ax3, shrink=0.75)
     cbar3.set_label('Chi_square')
@@ -169,6 +166,7 @@ if __name__ == "__main__":
     parser.add_argument('--infits', type=str, required=True, help="Text file containing list of FITS files")
     parser.add_argument('--outfits', type=str, required=True, help="Output FITS file for spectral index map")
     parser.add_argument('--contour', type=str, required=True, help="FITS file for contour overlay")
+    parser.add_argument('--rms', type=float, required=True, help="background RMS of contour image")
     parser.add_argument('--host_ra', type=float, help="RA of the host galaxy")
     parser.add_argument('--host_dec', type=float, help="DEC of the host galaxy")
 
@@ -180,8 +178,8 @@ if __name__ == "__main__":
     
     host_coords = None
     if args.host_ra is not None and args.host_dec is not None:
-        host_coords = SkyCoord(ra=args.host_ra * u.deg, dec=args.host_dec * u.deg, frame='icrs')
+        host_coords = SkyCoord(ra=args.host_ra * u.deg, dec=args.host_dec * u.deg, frame='fk5')
 
-    spectral_index_map, spectral_error_map, chi2red_map, header = create_spectral_index_map(fits_files, args.outfits)
-    plot_spectral_index_map(spectral_index_map, spectral_error_map, chi2red_map, header, args.contour, host_coords)
+    spectral_index_map, spectral_error_map, chi2red_map, header = create_spectral_index_map(fits_files, args.outfits, args.contour, args.rms)
+    plot_maps(spectral_index_map, spectral_error_map, chi2red_map, header, args.contour, host_coords, args.rms)
 
