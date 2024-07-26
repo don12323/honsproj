@@ -95,7 +95,7 @@ def create_spectral_index_map(fits_files, output_file, cont_fits, rms):
     print(f"Min chi2red: {np.nanmin(chi2red_map)}, Max chi2red: {np.nanmax(chi2red_map)}")
     print(f"mean chi2r: {np.nanmean(chi2red_map)}, mean SEM: {np.nanmean(spectral_index_error_map)}")
     # Add mask
-    lower = spectral_index_map > -2.8
+    lower = spectral_index_map > -4
     upper = spectral_index_map < -0.1
     with fits.open(cont_fits) as hdu:
         contour_data = hdu[0].data
@@ -108,6 +108,7 @@ def create_spectral_index_map(fits_files, output_file, cont_fits, rms):
     #hdu = fits.PrimaryHDU(spectral_index_map, header=header)
     #hdul = fits.HDUList([hdu])
     #hdul.writeto(output_file, overwrite=True)
+    header['RMS'] = rms
     maps_hdu = fits.PrimaryHDU(header=header)
 
     hdu_sim = fits.ImageHDU(spectral_index_map,header=header, name='INDEX_MAP')
