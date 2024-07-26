@@ -114,7 +114,7 @@ def create_spectral_index_map(fits_files, output_file, cont_fits, rms):
     hdu_sim = fits.ImageHDU(spectral_index_map,header=header, name='INDEX_MAP')
     hdu_errm = fits.ImageHDU(spectral_index_error_map, header=header, name='ERROR_MAP')
     hdu_chi2redm = fits.ImageHDU(chi2red_map,header=header, name='CHI2RED_MAP')
-    hdu_im = fits.ImageHDU(data_stack[0], header=header, name='IMAGE')
+    hdu_im = fits.ImageHDU(contour_data, header=header, name='IMAGE')
 
     hdul = fits.HDUList([maps_hdu, hdu_sim, hdu_errm, hdu_chi2redm, hdu_im])
     hdul.writeto(output_file, overwrite=True)
