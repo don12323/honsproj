@@ -233,16 +233,16 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
 
 
         #calculate the integrated flux
-        print(f"   Number of pixels in hex {hexagon.name}: {npix_hex} Aperture size: {npix_hex*pixarea*3600**2:.2f} arcsec^2")
-        int_flux = (total_flux_in_hex * pixarea / barea) #-TODO (bkg_flux * npix_hex * pixarea / barea) #bkg_flux*(nbeams inside hex)
+        print(f"   Number of pixels in hex {hexagon.name}: {npix_hex} Size: {npix_hex*pixarea*3600**2:.2f} arcsec^2")
+        int_flux = (total_flux_in_hex * pixarea / barea) -(bkg_flux * npix_hex *pixarea / barea) #-TODO (bkg_flux * npix_hex * pixarea / barea) #bkg_flux*(nbeams inside hex)
         total_fluxes.append(int_flux)
         #uncertainties
-        rms = np.sqrt(np.mean(np.array(flux_squared)))
-        uncertainty = np.sqrt(rms**2 + (0.02 * int_flux)**2 + (std_bkg * npix_hex * pixarea / barea)**2) #TODO **IMPORTANT**check with supv if error is associated with each pix or final flux
+        rms = np.sqrt(np.mean(np.array(flux_squared)))      #TODO Are we supposed to use rms in hex for uncertainty??
+        uncertainty = np.sqrt(rms_bkg**2 + (0.02 * int_flux)**2 + (std_bkg * npix_hex * pixarea / barea)**2) #TODO **IMPORTANT**check with supv if error is associated with each pix or final flux
         uncertainties.append(uncertainty)
         #add flux to hex
         hexagon.add_flux(int_flux,uncertainty)
-        print(f"bkg tot flux in hex: {bkg_flux * npix_hex * pixarea / barea}")
+        print(f"   bkg tot flux in hex: {bkg_flux * npix_hex * pixarea / barea}")
 
     for hexagon, flux, uncertainty in zip(hexagons, total_fluxes, uncertainties):
         print(f"   Hexagon {hexagon.name}: Integrated Flux = {flux*10**3:.4f} +\- {uncertainty*10**3:.6f} mJy, ")
@@ -295,12 +295,10 @@ def plot_sed(hexagons, frequencies, data):
         for (flux, error) in hexagon.fluxes:
             flux_values.append(flux)
             flux_errors.append(error)
-        amp, alpha, damp ,dalpha = WLLS(flux_values, frequencies, flux_errors)
+        amp, alpha, damp ,dalpha, chi2red = WLLS(flux_values, frequencies, flux_errors)
         #plt.errorbar(frequencies, flux_values, yerr=flux_errors, fmt='o', label=f'Hex {hexagon.name}', capsize=5, markersize=5, color=hexagon.color)
         #fit_freqs = np.logspace(np.log10(min(frequencies)), np.log10(max(frequencies)), num=100)
         fit_fluxes = (10.0 **amp) * frequencies ** alpha
-        chi2 = np.sum(((flux_values - fit_fluxes) / flux_errors) ** 2)
-        chi2red = chi2 / (len(frequencies) -2)
         
         plt.plot(frequencies, flux_values, 'o', label=f'Hex {hexagon.name} alph = {alpha:.2f} ± {dalpha:.2f}, chi2red = {chi2red:.3f}', color=hexagon.color)
         print(f"WLLS: Hex {hexagon.name}: alpha = {alpha:.2f} ± {dalpha:.2f}, amp = {10 ** amp:.2f} ± {10 ** damp:.2f}, chi2red = {chi2red:.3f}")
@@ -338,7 +336,8 @@ def WLLS(S1, f1, Serr1):
     sigma = sumR / df
     beta_var = sigma * XtWX
     stderr = np.sqrt(np.diag(beta_var))
-    return beta[0], beta[1] , stderr[0], stderr[1]
+    chi2red = (r.T @ W @ r) / df
+    return beta[0], beta[1] , stderr[0], stderr[1], chi2red
 
 
 if __name__ == "__main__":
@@ -353,7 +352,7 @@ if __name__ == "__main__":
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
     
-    reg_file = 'botlobe.reg'
+    reg_file = 'toplobe.reg'
     bkg_file = 'bkg.reg'
     
 
