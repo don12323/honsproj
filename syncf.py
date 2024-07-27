@@ -18,6 +18,8 @@ def read_dat_file(file_name):
     frequency = data['Frequency (Hz)'].values
     photometry = data['Photometry (Jy)'].values
     uncertainty = data['Uncertainty (Jy)'].values
+
+
     return obsname, frequency, photometry, uncertainty
 
 
@@ -81,12 +83,12 @@ def main(file_name):
     obsname, frequency, photometry, uncertainty = read_dat_file(file_name)
     #calculate Beq
     p = 0.5
-    alpha_thin = -1.1
+    alpha_thin = -1.8
     nu_peak =7.510961461177
     S_peak=0.038872512411101165 
-    theta_src_min =  21.9767
-    theta_src_max = 30.476
-    z = 0.366972
+    theta_src_min = 46                 # J01445 21.9767
+    theta_src_max = 55                 # J01445 30.476
+    z = 0.097000                               # J01445 0.366972
 
 
     X_p = ((10**(p+alpha_thin))-(nu_peak**(p+alpha_thin)))/(p+alpha_thin)
