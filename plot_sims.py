@@ -128,8 +128,8 @@ def plot_remaining_sources(fits_files, output_file):
 
 pattern = '/data/donwijesinghe/*_res/a.fits'
 fits_files = glob.glob(pattern)
-output_file_1 = 'spectral_index_maps_1.pdf'
-output_file_2 = 'spectral_index_maps_2.pdf'
+output_file_1 = '../results/spectral_index_maps_1.pdf'
+output_file_2 = '../results/spectral_index_maps_2.pdf'
 plot_first_four_sources(fits_files, output_file_1)
 plot_remaining_sources(fits_files, output_file_2)
 
