@@ -1,8 +1,11 @@
-import matplotlib
+#!/usr/bin/env python3 
+
 import matplotlib.pyplot as plt
 import numpy as np
 import math
 import argparse
+import random
+import matplotlib.mlab as mlab
 
 from matplotlib.patches import RegularPolygon
 from matplotlib.patches import Polygon as MtPltPolygon
@@ -14,9 +17,17 @@ from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
 from astropy import units as u
 from astropy.utils.exceptions import AstropyWarning
+from astropy.visualization import wcsaxes
 
 import warnings
 import sys
+import csv
+
+#style
+plt.style.use('seaborn-v0_8-bright')
+plt.rcParams["font.family"] = "serif"
+plt.rcParams["axes.grid"] = False
+
 #ignore warnings from wcs
 warnings.simplefilter('ignore', AstropyWarning)
 
@@ -32,11 +43,14 @@ class Colors:
     UNDERLINE = '\033[4m'
 
 class Hexagon:
+    color_list = ['#FF5733', '#33FF57', '#3357FF', '#FF33A1', '#33FFF1', '#F1FF33', '#F133FF']
     def __init__(self, name):
         self.name = name
         self.vertices = None
         self.centre = None
         self.fluxes = []
+        self.color = Hexagon.color_list.pop(0) if Hexagon.color_list else "#{:06x}".format(random.randint(0, 0xFFFFFF))
+
     def set_attributes(self, vertices, centre):
         self.vertices = vertices
         self.centre = centre
@@ -46,12 +60,32 @@ class Hexagon:
 #function for calculating hexagon vertices
 def calc_hex_vert(centre, width):
     vertices = []
-    r = width*(1/np.sqrt(3))
+    r = width*(1/np.sqrt(3))*0.99
     for n in range(0,6,1):
         x = centre[0] + r*np.cos(n*2*np.pi/6)
         y = centre[1] + r*np.sin(n*2*np.pi/6)
         vertices.append((x,y))
     return vertices
+
+def read_data(input_file):
+
+    f = []
+    S = []
+    Serr = []
+
+    with open(input_file, 'r') as file:
+        reader = csv.reader(file)
+        header = next(reader)  # Skip the header row
+        if header != ['Spectra', 'Frequency (Hz)', 'Photometry (Jy)', 'Uncertainty (Jy)']:
+            print("Invalid header format. Expected ['Spectra', 'Frequency (Hz)', 'Photometry (Jy)', 'Uncertainty (Jy)']")
+            return None, None, None
+
+        for row in reader:
+            f.append(float(row[1]))
+            S.append(float(row[2]))
+            Serr.append(float(row[3]))
+
+    return np.array(S), np.array(f), np.array(Serr)
 
 def extract_header_data(filename):
     print(f"{Colors.OKCYAN}>> Reading in FITS file: {filename}{Colors.ENDC} \n")
@@ -62,7 +96,11 @@ def extract_header_data(filename):
         naxis = header["NAXIS"]
         bmaj = header["BMAJ"]
         bmin = header["BMIN"]
-        freq = header["RESTFRQ"]
+        try:
+            freq = header["RESTFREQ"]
+        except KeyError:
+            freq = header["RESTFRQ"]
+
         print(f"  {Colors.OKGREEN} FREQ: {freq}Hz {Colors.ENDC}")
         if naxis != 2:
             print(f"{Colors.FAIL}Error: NAXIS is not equal to 2 for file: {filename}{Colors.ENDC}")
@@ -78,8 +116,7 @@ def extract_header_data(filename):
         
         barea = np.pi*bmaj*bmin/(4.0*np.log(2))
         npixpb = barea/(abs(pixd1*pixd2))
-        print(f"   Beam area: {barea*3600**2:.2f} arcsec^2")        
-        print(f"   NAXIS: {naxis}")
+        print(f"   Beam area: {barea*3600**2:.3f} arcsec^2")        
         print(f"   Number of pixels per beam: {npixpb}\n")
 
         wcs = WCS(header, naxis= naxis)
@@ -140,31 +177,39 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     #TODO there's a jump down in frequency when switching to the zoomed out images-probs gets fixed when you regrid everything
     #read in background polygon in image coordinates
     bkg_regions = pyregion.open(bkg_file).as_imagecoord(header=header)
-    bkg_coords = []
+    #print(bkg_regions)
+    source_polygons = []
     for region in bkg_regions:
+        poly_coords = []
         for i in range(0, len(region.coord_list), 2):
-            bkg_coords.append((region.coord_list[i], region.coord_list[i+1]))
+            poly_coords.append((region.coord_list[i], region.coord_list[i + 1]))
+        source_polygons.append(Polygon(poly_coords))
 
-    bkg_polygon = Polygon(bkg_coords)
-    
+
     #calculate the mean background flux
     npix_bkg=0
     bkg_flux_values = []
     bkg_pixels = []
-    min_x, min_y, max_x, max_y = bkg_polygon.bounds
-    for y in range(math.ceil(min_y)-1, math.floor(max_y)+1):
-        for x in range(math.ceil(min_x)-1, math.floor(max_x)+1):
+    bkg_squared = []
+    max_x, max_y = data.shape[1], data.shape[0]
+    min_x, min_y = 1, 1
+    for y in range(math.ceil(min_y), math.floor(max_y)):
+        for x in range(math.ceil(min_x), math.floor(max_x)):
+            point = Point(x,y)
             #corners
-            if bkg_polygon.contains(Point(x,y)):
+            if all(not poly.contains(point) for poly in source_polygons) and not np.isnan(data[y - 1, x - 1]):
+             #   print(x,y) 
                 bkg_flux_values.append(data[y-1,x-1])
                 npix_bkg+=1
                 bkg_pixels.append((x, y))
+                bkg_squared.append(data[y-1,x-1]**2)
 
     bkg_flux = np.mean(bkg_flux_values)
     std_bkg = np.std(bkg_flux_values)
-
+    rms_bkg = np.sqrt(np.mean(np.array(bkg_squared)))
     print(f"   {Colors.OKGREEN}Background mean flux: {bkg_flux} +\- {std_bkg} Jy/beam{Colors.ENDC}")
     print("   Number of pixels in background: ",npix_bkg) 
+    print(f"rms_bkg: {rms_bkg}")
     #calculate integrated flux for each hexagon
     print("\n")
     print(f"   {Colors.UNDERLINE}CALCULATING FLUXES FOR HEX{Colors.ENDC}")
@@ -189,37 +234,49 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
 
 
         #calculate the integrated flux
-        print(f"   Number of pixels in hex {hexagon.name}: {npix_hex} Aperture size: {npix_hex*pixarea*3600**2:.2f} arcsec^2")
-        int_flux = (total_flux_in_hex * pixarea / barea) - (bkg_flux * npix_hex * pixarea / barea) #bkg_flux*(nbeams inside hex)
+        print(f"   Number of pixels in hex {hexagon.name}: {npix_hex} Size: {npix_hex*pixarea*3600**2:.2f} arcsec^2")
+        int_flux = (total_flux_in_hex * pixarea / barea) -(bkg_flux * npix_hex *pixarea / barea) #-TODO (bkg_flux * npix_hex * pixarea / barea) #bkg_flux*(nbeams inside hex)
         total_fluxes.append(int_flux)
         #uncertainties
-        rms = np.sqrt(np.mean(np.array(flux_squared)))
-        uncertainty = np.sqrt(rms**2 + (0.02 * int_flux)**2 + (std_bkg * npix_hex * pixarea / barea)**2)
+        rms = np.sqrt(np.mean(np.array(flux_squared)))      #TODO Are we supposed to use rms in hex for uncertainty??
+        uncertainty = np.sqrt(rms_bkg**2 + (0.02 * int_flux)**2 + (std_bkg * npix_hex * pixarea / barea)**2) #TODO **IMPORTANT**check with supv if error is associated with each pix or final flux
         uncertainties.append(uncertainty)
         #add flux to hex
         hexagon.add_flux(int_flux,uncertainty)
+        print(f"   bkg tot flux in hex: {bkg_flux * npix_hex * pixarea / barea}")
 
     for hexagon, flux, uncertainty in zip(hexagons, total_fluxes, uncertainties):
         print(f"   Hexagon {hexagon.name}: Integrated Flux = {flux*10**3:.4f} +\- {uncertainty*10**3:.6f} mJy, ")
 
-    return bkg_polygon
+    return source_polygons, rms_bkg, bkg_pixels
  
 
-def plotPolygons(region, hexagons, wcs, data, bkg_polygon): 
+def plotPolygons(region, hexagons, wcs, header, data, source_polygons, rms, bkg_pixels): 
     fig = plt.figure(figsize=(8,8))
     ax = fig.add_subplot(1,1,1,projection=wcs)
-    im=ax.imshow(data, cmap='hot')
+    im=ax.imshow(data, cmap='gray')
 
+    #contours
+    contour_levels = rms * np.array([3,6,9]) #[-3, 3, 6, 9]
+    contours = ax.contour(data, levels=contour_levels, colors='white', linewidths=0.5, linestyles='dashed')
     ax.add_patch(region)
 
     for hexagon in hexagons:
-        patch = MtPltPolygon(hexagon.vertices, closed=True, edgecolor='white', fill=False)
+        patch = MtPltPolygon(hexagon.vertices, closed=True, edgecolor=hexagon.color, fill=False)
         ax.add_patch(patch)
-        ax.annotate(hexagon.name, xy=hexagon.centre, ha='center', va='center', color='white')   
+        ax.annotate(hexagon.name, xy=hexagon.centre, ha='center', va='center', color=hexagon.color)   
     
     #plot background
-    bkg_patch = MtPltPolygon(bkg_polygon.exterior.coords, closed=True, edgecolor='blue', fill=False)
-    ax.add_patch(bkg_patch)
+    for poly in source_polygons:
+        bkg_patch = MtPltPolygon(poly.exterior.coords, closed=True, edgecolor='blue', fill=False)
+        ax.add_patch(bkg_patch)
+    
+    #plot bkgpixels
+    #bkg_x, bkg_y = zip(*bkg_pixels)
+   # ax.plot(bkg_x, bkg_y, 'ro', markersize=1)
+    wcsaxes.add_beam(ax, header = header)
+    wcsaxes.add_scalebar(ax, 0.00396162)
+
     ax.grid(color='white', ls='dotted')
 
     plt.xlabel('RA')
@@ -227,34 +284,68 @@ def plotPolygons(region, hexagons, wcs, data, bkg_polygon):
     
     #plot and save fig    
     plt.savefig("hex_grid_1.png")
-    plt.show()
+#    plt.show()
 
 
 
-def plot_sed(hexagons, frequencies):
+def plot_sed(hexagons, frequencies, data):
+    plt.figure(figsize=(10, 6))
     for hexagon in hexagons:
         flux_values = []
         flux_errors = []
         for (flux, error) in hexagon.fluxes:
             flux_values.append(flux)
             flux_errors.append(error)
-
-        plt.errorbar(frequencies, flux_values, yerr=flux_errors, fmt='o', label=f'Hex {hexagon.name}')
+        amp, alpha, damp ,dalpha, chi2red = WLLS(flux_values, frequencies, flux_errors)
+        #plt.errorbar(frequencies, flux_values, yerr=flux_errors, fmt='o', label=f'Hex {hexagon.name}', capsize=5, markersize=5, color=hexagon.color)
+        #fit_freqs = np.logspace(np.log10(min(frequencies)), np.log10(max(frequencies)), num=100)
+        fit_fluxes = (10.0 **amp) * frequencies ** alpha
+        
+        plt.plot(frequencies, flux_values, 'o', label=f'Hex {hexagon.name} alph = {alpha:.2f} ± {dalpha:.2f}, chi2red = {chi2red:.3f}', color=hexagon.color)
+        print(f"WLLS: Hex {hexagon.name}: alpha = {alpha:.2f} ± {dalpha:.2f}, amp = {10 ** amp:.2f} ± {10 ** damp:.2f}, chi2red = {chi2red:.3f}")
+        plt.plot(frequencies, fit_fluxes, '-', color=hexagon.color)
+   
+	#plot lobe1/2 or total 
+    if data:
+        filename = data
+        S, f, Serr = read_data(filename)
+        plt.plot(f,S, 'o', color='Black', label='Total')
     
     plt.xlabel('Frequency (Hz)')
     plt.ylabel('Integrated Flux (Jy)')
     plt.legend()
     plt.yscale('log')
     plt.xscale('log')
-    plt.grid(True)
+    plt.grid(True, which='both', linestyle='--', linewidth=0.5)
+    plt.tight_layout()
     plt.savefig("sed_plot.png")
     plt.show()
+  
+def WLLS(S1, f1, Serr1):
+
+    f = np.log10(np.array(f1))
+    S = np.log10(np.array(S1))
+    Serr = np.array(Serr1) / np.array(S1)*np.log(10)
+
+    X = np.column_stack((np.ones_like(f), f))
+    W = np.diag(1/Serr**2)
+    XtWX = np.linalg.inv(X.T @ W @ X)
+    beta = XtWX @ X.T @ W @ S
+    r = S - X @ beta
+    df = len(f) - 2
+    sumR = np.sum(r**2)
+    sigma = sumR / df
+    beta_var = sigma * XtWX
+    stderr = np.sqrt(np.diag(beta_var))
+    chi2red = (r.T @ W @ r) / df
+    return beta[0], beta[1] , stderr[0], stderr[1], chi2red
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Hexagonal grid flux measurement")
     parser.add_argument('--width', type=float, required=True, help="Width of the hexagons in arcseconds")
     parser.add_argument('--infits', type=str, required=True, help="Text file containing list of FITS files")
+    parser.add_argument('--data', type=str, help="File containing total flux data")
     args = parser.parse_args()
     width = args.width
 
@@ -265,8 +356,6 @@ if __name__ == "__main__":
     reg_file = 'toplobe.reg'
     bkg_file = 'bkg.reg'
     
-    #reg_file = '../data/reg1_deg_icrs.reg'
-    #bkg_file = 'bkg_test.reg'
 
     frequencies = []
     hexagons=None
@@ -276,18 +365,15 @@ if __name__ == "__main__":
         data, wcs, header, pixd1, pixd2, barea, freq = extract_header_data(f)
         poly_pix, hexagons = polygons(reg_file, header, width, pixd1, hexagons)
         #measure flux in each hexagon
-        bkg_polygon = measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
+        bkg_polygon, rms_bkg, bkg_pixels = measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
         
         frequencies.append(freq)
 
         #plotting
         region = MtPltPolygon(poly_pix, closed=True, edgecolor='r', linewidth=1, fill=False)
-        plotPolygons(region, hexagons, wcs, data, bkg_polygon) 
+        plotPolygons(region, hexagons, wcs, header, data, bkg_polygon, rms_bkg, bkg_pixels) 
         print("\n")
     #plot sed for each hex
     print(frequencies)
-    plot_sed(hexagons, frequencies)
-
-
-
+    plot_sed(hexagons, frequencies, args.data)
 
