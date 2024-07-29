@@ -9,7 +9,6 @@ import matplotlib.pyplot as plt
 from sf.synchrofit import spectral_fitter, spectral_model_, spectral_ages
 plt.style.use('seaborn-v0_8-bright')
 plt.rcParams["font.family"] = "serif"
-plt.rcParams["axes.grid"] = False
 
 # Define the function to read the .dat file
 def read_dat_file(file_name):

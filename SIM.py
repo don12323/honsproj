@@ -130,13 +130,13 @@ def plot_maps(spectral_index_map, spectral_index_error_map, chi2red_map, header,
     #rms = 3.2323823378589636e-05                 #J01445 4.929831199803229e-05
     levels = [3*rms, 6*rms, 15*rms, 35*rms, 46*rms]
 
-    im1 = ax1.imshow(spectral_index_map, cmap='gist_rainbow_r')
+    im1 = ax1.imshow(spectral_index_map, cmap='viridis') #gist_rainbow_r
     ax1.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax1.get_transform(WCS(header, naxis=2)),alpha = 0.5)
     ax1.set_title('Spectral Index Map')
     cbar1 = fig.colorbar(im1, ax=ax1, shrink=0.75)
     cbar1.set_label(r'$\alpha_{6GHz}$')
 
-    im2 = ax2.imshow(spectral_index_error_map, origin = 'lower', cmap='gist_rainbow_r', norm=LogNorm())
+    im2 = ax2.imshow(spectral_index_error_map, origin = 'lower', cmap='viridis', norm=LogNorm())
     ax2.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax2.get_transform(WCS(header,naxis=2)),alpha = 0.5)
     ax2.set_title('Spectral Index error Map')
     cbar2 = plt.colorbar(im2, ax=ax2, shrink=0.75)
