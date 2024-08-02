@@ -95,7 +95,7 @@ def create_spectral_index_map(fits_files, output_file, cont_fits, rms):
     print(f"Min chi2red: {np.nanmin(chi2red_map)}, Max chi2red: {np.nanmax(chi2red_map)}")
     print(f"mean chi2r: {np.nanmean(chi2red_map)}, mean SEM: {np.nanmean(spectral_index_error_map)}")
     # Add mask
-    lower = spectral_index_map > -3.5
+    lower = spectral_index_map > -2.8
     upper = spectral_index_map < -0.1
     with fits.open(cont_fits) as hdu:
         contour_data = hdu[0].data
@@ -130,7 +130,7 @@ def plot_maps(spectral_index_map, spectral_index_error_map, chi2red_map, header,
     #rms = 3.2323823378589636e-05                 #J01445 4.929831199803229e-05
     levels = [3*rms, 6*rms, 15*rms, 35*rms, 46*rms]
 
-    im1 = ax1.imshow(spectral_index_map, cmap='viridis') #gist_rainbow_r
+    im1 = ax1.imshow(spectral_index_map, cmap='gist_rainbow_r') #gist_rainbow_r
     ax1.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax1.get_transform(WCS(header, naxis=2)),alpha = 0.5)
     ax1.set_title('Spectral Index Map')
     cbar1 = fig.colorbar(im1, ax=ax1, shrink=0.75)
