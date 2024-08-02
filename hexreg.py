@@ -96,6 +96,7 @@ def extract_header_data(filename):
         naxis = header["NAXIS"]
         bmaj = header["BMAJ"]
         bmin = header["BMIN"]
+        bpa = header["BPA"]
         try:
             freq = header["RESTFREQ"]
         except KeyError:
@@ -113,11 +114,14 @@ def extract_header_data(filename):
             pixd1, pixd2 = header["CD1_1"], header["CD2_2"]
 
         print(f'   Pixel size: {abs(pixd1*3600):.2f}" x {pixd2*3600:.2f}"') 
+        print(f"   {Colors.HEADER}Beam parameters: {bmaj*3600},{bmin*3600},{bpa} {Colors.ENDC}")
         
         barea = np.pi*bmaj*bmin/(4.0*np.log(2))
         npixpb = barea/(abs(pixd1*pixd2))
         print(f"   Beam area: {barea*3600**2:.3f} arcsec^2")        
         print(f"   Number of pixels per beam: {npixpb}\n")
+
+        
 
         wcs = WCS(header, naxis= naxis)
     return data, wcs, header, pixd1, pixd2, barea, freq
