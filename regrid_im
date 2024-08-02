@@ -1,0 +1,40 @@
+#!/bin/bash
+
+usage()
+{
+echo This script will regrid fits images to match the pixel grid of a template image.
+echo "regrid.sh [-i] [-t] 
+        -i input_image    : Image to be regridded.
+        -t template_image : Template image whose grid will be matched." 1>&2;
+exit 1;
+}
+
+#parse args and set options,
+while getopts ':i:t:' OPTION
+do
+        case "$OPTION" in
+                i)
+                        input_image=${OPTARG}
+                        ;;
+                t)
+                        template_image=${OPTARG}
+                        ;;
+                ? | : | h )
+                        usage
+                        ;;
+        esac
+done
+
+echo Reading in all the files ...
+fits op=xyin in=$input_image out=${input_image%.fits}.im
+fits op=xyin in=$template_image out=${template_image%.fits}.im
+
+echo Regridding $input_image to match $template_image pixel grid ...
+regrid in=${input_image%.fits}.im tin=${template_image%.fits}.im axes=1,2 out=${input_image%.fits}_rg.im
+
+echo Exporting regridded .im file to .fits file ...
+fits op=xyout in=${input_image%.fits}_rg.im out=${input_image%.fits}_rg.fits
+
+echo Deleting all .im files
+rm -r **.im
+
