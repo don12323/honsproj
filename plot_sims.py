@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy.coordinates import SkyCoord
+import astropy.units as u
 import glob
 
 
@@ -23,7 +25,13 @@ def plot_first_four_sources(fits_files, output_file):
             chi2red_map = hdul['CHI2RED_MAP'].data
             image = hdul['IMAGE'].data
             rms = hdul[0].header['RMS']
-         
+
+            host_coords = None
+            if 'HGRA' in header and 'HGDEC' in header:
+                hgra = header['HGRA']
+                hgdec = header['HGDEC']
+                host_coords = SkyCoord(ra=hgra * u.deg, dec=hgdec * u.deg, frame='fk5')
+
         contour_levels = [3*rms, 6*rms, 10*rms, 15*rms, 25*rms]
 
         # Plot spectral index map
@@ -65,8 +73,14 @@ def plot_first_four_sources(fits_files, output_file):
         ax3.coords[1].set_ticklabel_visible(False)
         ax3.coords[1].set_axislabel('')
         cbar3 = fig.colorbar(im3, ax=ax3, orientation='vertical', pad=0.05, shrink=0.91)
-
-    
+        
+        # Plot hg coords
+        axes = [ax1, ax2, ax3]
+        for ax in axes:
+            if host_coords is not None:
+                host_pixel_coords = WCS(header).world_to_pixel(host_coords)
+                ax.plot(host_pixel_coords[0], host_pixel_coords[1], 'x', color='black', markersize=10)
+        
     plt.tight_layout()
     plt.savefig(output_file)
     plt.close(fig)
@@ -84,6 +98,11 @@ def plot_remaining_sources(fits_files, output_file):
             image = hdul['IMAGE'].data
             rms = hdul[0].header['RMS']
         
+            host_coords = None
+            if 'HGRA' in header and 'HGDEC' in header:
+                hgra = header['HGRA']
+                hgdec = header['HGDEC']
+                host_coords = SkyCoord(ra=hgra * u.deg, dec=hgdec * u.deg, frame='fk5')
         contour_levels = [3*rms, 6*rms, 10*rms, 15*rms, 25*rms]
 
         # spectral index map
@@ -122,12 +141,22 @@ def plot_remaining_sources(fits_files, output_file):
         ax3.coords[1].set_axislabel('')
         cbar3 = fig.colorbar(im3, ax=ax3, orientation='vertical', pad=0.05, shrink=0.91)
 
+        # Plot hg coords
+        axes = [ax1, ax2, ax3]
+        for ax in axes:
+            if host_coords is not None:
+                host_pixel_coords = WCS(header).world_to_pixel(host_coords)
+                ax.plot(host_pixel_coords[0], host_pixel_coords[1], 'x', color='black', markersize=10)
     plt.tight_layout()
     plt.savefig(output_file)
     plt.close(fig)
 
-pattern = '/data/donwijesinghe/*_res/a.fits'
-fits_files = glob.glob(pattern)
+pattern1 = '/data/donwijesinghe/*_res/a.fits'
+pattern2 = '/data/donwijesinghe/*_res/ma.fits'
+fits_files1 = glob.glob(pattern1)
+fits_files2 = glob.glob(pattern2)
+fits_files = fits_files1 + fits_files2
+
 output_file_1 = '../results/spectral_index_maps_1.pdf'
 output_file_2 = '../results/spectral_index_maps_2.pdf'
 plot_first_four_sources(fits_files, output_file_1)
