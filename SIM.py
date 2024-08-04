@@ -54,7 +54,7 @@ def process_pixel(args):
         _, alpha, _, err_alpha, chi2red = WLLS(flux_array, frequencies, flux_errors)
         return i, j, alpha, err_alpha, chi2red
 
-def create_spectral_index_map(fits_files, output_file, cont_fits, rms):
+def create_spectral_index_map(fits_files, output_file, cont_fits, rms, host_coords):
     # Read FITS files and gather data
     data_list = []
     frequencies = []
@@ -95,7 +95,7 @@ def create_spectral_index_map(fits_files, output_file, cont_fits, rms):
     print(f"Min chi2red: {np.nanmin(chi2red_map)}, Max chi2red: {np.nanmax(chi2red_map)}")
     print(f"mean chi2r: {np.nanmean(chi2red_map)}, mean SEM: {np.nanmean(spectral_index_error_map)}")
     # Add mask
-    lower = spectral_index_map > -2.8
+    lower = spectral_index_map > -3
     upper = spectral_index_map < -0.1
     with fits.open(cont_fits) as hdu:
         contour_data = hdu[0].data
@@ -109,6 +109,10 @@ def create_spectral_index_map(fits_files, output_file, cont_fits, rms):
     #hdul = fits.HDUList([hdu])
     #hdul.writeto(output_file, overwrite=True)
     header['RMS'] = rms
+    # write host coordinates if provided
+    if host_coords is not None:
+        header['HGRA'] = host_coords.ra.deg
+        header['HGDEC'] = host_coords.dec.deg
     maps_hdu = fits.PrimaryHDU(header=header)
 
     hdu_sim = fits.ImageHDU(spectral_index_map,header=header, name='INDEX_MAP')
@@ -181,6 +185,6 @@ if __name__ == "__main__":
     if args.host_ra is not None and args.host_dec is not None:
         host_coords = SkyCoord(ra=args.host_ra * u.deg, dec=args.host_dec * u.deg, frame='fk5')
 
-    spectral_index_map, spectral_error_map, chi2red_map, header = create_spectral_index_map(fits_files, args.outfits, args.contour, args.rms)
+    spectral_index_map, spectral_error_map, chi2red_map, header = create_spectral_index_map(fits_files, args.outfits, args.contour, args.rms, host_coords)
     plot_maps(spectral_index_map, spectral_error_map, chi2red_map, header, args.contour, host_coords, args.rms)
 
