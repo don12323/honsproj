@@ -36,7 +36,7 @@ def plot_first_four_sources(fits_files, output_file):
 
         # Plot spectral index map
         ax1 = fig.add_subplot(4, 3, i * 3 + 1, projection=wcs)
-        im1 = ax1.imshow(spectral_index_map, origin='lower', cmap='gist_rainbow_r', interpolation='none')
+        im1 = ax1.imshow(spectral_index_map, origin='lower', cmap='gist_rainbow_r', interpolation='none', vmin=-4, vmax=-0.5)
         ax1.contour(image, levels=contour_levels, colors='black', alpha=0.5, transform=ax1.get_transform(wcs))
         ax1.tick_params(direction='in') #width=2
         if i == 0:
@@ -107,7 +107,7 @@ def plot_remaining_sources(fits_files, output_file):
 
         # spectral index map
         ax1 = fig.add_subplot(3, 3, i * 3 + 1, projection=wcs)
-        im1 = ax1.imshow(spectral_index_map, origin='lower', cmap='gist_rainbow_r', interpolation='none')
+        im1 = ax1.imshow(spectral_index_map, origin='lower', cmap='winter', interpolation='none', vmin=-2.5, vmax=-0.5) #gist rainbow
         ax1.contour(image, levels=contour_levels, colors='black', alpha=0.5, transform=ax1.get_transform(wcs))
         ax1.tick_params(direction='in')
         if i == 0:
@@ -119,7 +119,7 @@ def plot_remaining_sources(fits_files, output_file):
         ax1.text(0.02, 0.95, labels[i], transform=ax1.transAxes, fontsize=14, fontweight='bold', va='top', ha='left')
         # spectral index error map
         ax2 = fig.add_subplot(3, 3, i * 3 + 2, projection=wcs)
-        im2 = ax2.imshow(spectral_index_error_map, origin='lower', cmap='gist_rainbow_r', interpolation='none', norm=LogNorm())
+        im2 = ax2.imshow(spectral_index_error_map, origin='lower', cmap='cool', interpolation='none', norm=LogNorm())
         ax2.contour(image, levels=contour_levels, colors='black', alpha=0.5, transform=ax2.get_transform(wcs))
         ax2.tick_params(direction='in')
         if i == 0:
@@ -131,7 +131,7 @@ def plot_remaining_sources(fits_files, output_file):
         
         # chi2red map
         ax3 = fig.add_subplot(3, 3, i * 3 + 3, projection=wcs)
-        im3 = ax3.imshow(chi2red_map, origin='lower', cmap='inferno', interpolation='none', norm=LogNorm())
+        im3 = ax3.imshow(chi2red_map, origin='lower', cmap='viridis', interpolation='none', norm=LogNorm())
         ax3.contour(image, levels=contour_levels, colors='black', alpha=0.5, transform=ax3.get_transform(wcs))
         ax3.tick_params(direction='in')
         if i == 0:

@@ -95,7 +95,7 @@ def create_spectral_index_map(fits_files, output_file, cont_fits, rms, host_coor
     print(f"Min chi2red: {np.nanmin(chi2red_map)}, Max chi2red: {np.nanmax(chi2red_map)}")
     print(f"mean chi2r: {np.nanmean(chi2red_map)}, mean SEM: {np.nanmean(spectral_index_error_map)}")
     # Add mask
-    lower = spectral_index_map > -3
+    lower = spectral_index_map > -5
     upper = spectral_index_map < -0.1
     with fits.open(cont_fits) as hdu:
         contour_data = hdu[0].data
@@ -134,19 +134,19 @@ def plot_maps(spectral_index_map, spectral_index_error_map, chi2red_map, header,
     #rms = 3.2323823378589636e-05                 #J01445 4.929831199803229e-05
     levels = [3*rms, 6*rms, 15*rms, 35*rms, 46*rms]
 
-    im1 = ax1.imshow(spectral_index_map, cmap='gist_rainbow_r') #gist_rainbow_r
+    im1 = ax1.imshow(spectral_index_map, cmap='inferno') #gist_rainbow_r
     ax1.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax1.get_transform(WCS(header, naxis=2)),alpha = 0.5)
     ax1.set_title('Spectral Index Map')
     cbar1 = fig.colorbar(im1, ax=ax1, shrink=0.75)
     cbar1.set_label(r'$\alpha_{6GHz}$')
 
-    im2 = ax2.imshow(spectral_index_error_map, origin = 'lower', cmap='viridis', norm=LogNorm())
+    im2 = ax2.imshow(spectral_index_error_map, origin = 'lower', cmap='inferno', norm=LogNorm())
     ax2.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax2.get_transform(WCS(header,naxis=2)),alpha = 0.5)
     ax2.set_title('Spectral Index error Map')
     cbar2 = plt.colorbar(im2, ax=ax2, shrink=0.75)
     cbar2.set_label('Error')
     
-    im3 = ax3.imshow(chi2red_map, origin = 'lower', cmap = 'inferno', norm=LogNorm())
+    im3 = ax3.imshow(chi2red_map, origin = 'lower', cmap = 'viridis', norm=LogNorm())
     ax3.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax3.get_transform(WCS(header,naxis=2)), alpha = 0.5)
     ax3.set_title('Reduced Chi-square Map')
     cbar3 = plt.colorbar(im3, ax=ax3, shrink=0.75)
@@ -158,7 +158,7 @@ def plot_maps(spectral_index_map, spectral_index_error_map, chi2red_map, header,
         #plot host galaxy
         if host_coords is not None:
             host_pixel_coords = WCS(header).world_to_pixel(host_coords)
-            ax.plot(host_pixel_coords[0], host_pixel_coords[1], 'x', color='black', markersize=10)
+            ax.plot(host_pixel_coords[0], host_pixel_coords[1], 'x', color='#08F7FE', markersize=10)
 
 
 
