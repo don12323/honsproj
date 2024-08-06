@@ -9,7 +9,8 @@ from astropy.coordinates import SkyCoord
 import astropy.units as u
 from astropy.visualization import wcsaxes
 import argparse
-
+plt.style.use('seaborn-v0_8-bright')
+plt.rcParams["font.family"] = "serif"
 def main(infrared_fits, radio_fits, rms, coords_file):
     # Load the infrared image
     with fits.open(infrared_fits) as ir_hdul:
@@ -48,8 +49,8 @@ def main(infrared_fits, radio_fits, rms, coords_file):
               vmax=np.percentile(ir_reproj, 99.5))
 
     # Set axis labels
-    ax.set_xlabel('R.A (J2000)')
-    ax.set_ylabel('Dec (J2000)')
+    ax.set_xlabel('R.A. (J2000)')
+    ax.set_ylabel('Dec. (J2000)')
 
     # Overlay the masked radio image in mJy
     ax.imshow(radio_masked * 1e3, cmap='inferno', origin='lower', alpha=0.5)
@@ -74,7 +75,7 @@ def main(infrared_fits, radio_fits, rms, coords_file):
 
     # Add the radio image color bar
     cbar = fig.colorbar(ax.images[-1], ax=ax, shrink=1, pad=0.04)
-    cbar.set_label('Brightness (mJy)')
+    cbar.set_label('Brightness (mJy/beam)')
 
     # Adjust layout and display the plot
     fig.tight_layout()
