@@ -44,7 +44,7 @@ def main(infrared_fits, radio_fits, rms, coords_file):
     fig, ax = plt.subplots(figsize=(7, 5), subplot_kw={'projection': radio_wcs})
 
     # Plot the reprojected infrared image
-    ax.imshow(ir_reproj, cmap='gray', origin='lower',
+    ax.imshow(ir_reproj, cmap='gray_r', origin='lower',
               vmin=np.percentile(ir_reproj, 5),
               vmax=np.percentile(ir_reproj, 99.5))
 
@@ -53,7 +53,7 @@ def main(infrared_fits, radio_fits, rms, coords_file):
     ax.set_ylabel('Dec. (J2000)')
 
     # Overlay the masked radio image in mJy
-    ax.imshow(radio_masked * 1e3, cmap='inferno', origin='lower', alpha=0.5)
+    ax.imshow(radio_masked * 1e3, cmap='inferno', origin='lower', alpha=0.6)
 
     # Customize tick parameters
     ax.tick_params(direction='in', colors='white')
@@ -61,7 +61,7 @@ def main(infrared_fits, radio_fits, rms, coords_file):
     ax.tick_params(axis='y', which='both', labelcolor='black')
 
     # Plot radio contours
-    contour_lvls = np.array([3, 6, 9, 12, 15]) * rms
+    contour_lvls = np.array([-3, 6, 9, 12, 15, 18, 21, 24, 27, 30]) * rms
     ax.contour(radio_data, levels=contour_lvls, cmap='YlOrRd', linewidths=0.8, alpha=0.95)
 
     # Mark possible host galaxy positions with 'X' and number them
