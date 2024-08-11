@@ -75,32 +75,34 @@ def plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, p
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels, loc='upper right', fontsize=11, frameon=False)
     fig.tight_layout()
-    plt.savefig('model_fit.png')
+    plt.savefig(f'{fit_type}_model_fit.pdf')
 
-def main(file_name):
+def main(file_name, B_eq, z, remnant_range):
     # Read the data
     obsname, frequency, photometry, uncertainty = read_dat_file(file_name)
     #calculate Beq
-    p = 0.5
-    alpha_thin = -1.8
-    nu_peak =7.510961461177
-    S_peak=0.038872512411101165 
-    theta_src_min = 46                 # J01445 21.9767
-    theta_src_max = 55                 # J01445 30.476
-    z = 0.097000                               # J01445 0.366972
+    #p = 0.5
+    #alpha_thin = -1.66
+   # nu_peak =7.510961461177
+   # S_peak=0.0287236042540605 
+    #theta_src_min = 46                 # J01445 21.9767
+    #theta_src_max = 55                 # J01445 30.476
+    #z = 0.097000                               # J01445 0.366972
+   # theta_src_min = 53
+   # theta_src_max = 88.5
+   # z = 0.097
 
+    #X_p = ((10**(p+alpha_thin))-(nu_peak**(p+alpha_thin)))/(p+alpha_thin)
+    #redshift_part = ((1+1)/1)*((1+z)**(3+alpha_thin))
+    #source_size_part = 1/(theta_src_min*theta_src_max*theta_src_max)
+    #freq_flux_part = S_peak/(nu_peak**(-alpha_thin))
+    #B_eq = 5.69e-5 * (redshift_part * source_size_part * freq_flux_part * X_p)**(2/7) 
 
-    X_p = ((10**(p+alpha_thin))-(nu_peak**(p+alpha_thin)))/(p+alpha_thin)
-    redshift_part = ((1+1)/1)*((1+z)**(3+alpha_thin))
-    source_size_part = 1/(theta_src_min*theta_src_max*theta_src_max)
-    freq_flux_part = S_peak/(nu_peak**(-alpha_thin))
-    B_eq = 5.69e-5 * (redshift_part * source_size_part * freq_flux_part * X_p)**(2/7) 
-
-    B_eq = B_eq / 1e4
+    
 
     print("Beq is :",B_eq,"nT")
-    fit_type = 'CI' 
-    params, _, _, _, _, _= spectral_fitter(frequency, photometry, uncertainty, fit_type)
+    fit_type = 'TCI' 
+    params, _, _, _, _, _= spectral_fitter(frequency, photometry, uncertainty, fit_type, remnant_range=remnant_range,b_field=B_eq,redshift=z)
     
     # Generate the model spectrum
     model_data, err_model_data, model_data_min, model_data_max = spectral_model_(params, frequency)
@@ -126,12 +128,13 @@ def main(file_name):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fit synchrotron spectrum to radio data")
-    parser.add_argument("file_name", type=str, help="Name of the data file (.dat format)")
-    
-    
-
+    parser.add_argument("--data", type=str, help="Name of the data file (.dat format)")
+    parser.add_argument("-B", type=float, required=True, help="Magnetic field strength in T")
+    parser.add_argument("-z", type=float, required=True, help="Redshift of the source") 
+    parser.add_argument("--remnant_range", dest='remnant_range', type=float, nargs='+', default=[0, 1],
+                        help="(Default = [0, 1]) Accepted range for the remnant ratio")
     args = parser.parse_args()
-    main(args.file_name)
+    main(args.data, args.B, args.z, args.remnant_range)
 
 
 
