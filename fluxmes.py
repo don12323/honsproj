@@ -171,7 +171,7 @@ def measure_flux(header,data, pixarea, barea, reg_file, bkg_file):
 
     #calculate the integrated flux
     print(f"   Number of pixels in region: {npix_reg} Size: {npix_reg*pixarea*3600**2:.2f} arcsec^2")
-    int_flux = (total_flux_in_reg * pixarea / barea) -(bkg_flux * npix_reg *pixarea / barea) #-TODO (bkg_flux * npix_hex * pixarea / barea) #bkg_flux*(nbeams inside hex)
+    int_flux = (total_flux_in_reg * pixarea / barea)# -(bkg_flux * npix_reg *pixarea / barea) #-TODO (bkg_flux * npix_hex * pixarea / barea) #bkg_flux*(nbeams inside hex)
     #uncertainties
     rms = np.sqrt(np.mean(np.array(flux_squared)))      #TODO Are we supposed to use rms in hex for uncertainty??
     uncertainty = np.sqrt(rms_bkg**2 + (0.02 * int_flux)**2 + (std_bkg * npix_reg * pixarea / barea)**2) #TODO **IMPORTANT**check with supv if error is associated with each pix or final flux
