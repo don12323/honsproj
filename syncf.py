@@ -105,7 +105,7 @@ def log_results(file_name, B_eq, z, remnant_range, fit_type, params, ages):
         log_file.write(f"Input Parameters:\n")
         log_file.write(f"Data File: {file_name}\n")
         log_file.write(f"Magnetic Field (B_eq): {B_eq*1e9} nT\n")
-        log_file.write(f"Redshift (z): {z}\n")
+        log_file.write(f"Redshift: {z}\n")
         log_file.write(f"Remnant Range: {remnant_range}\n")
         log_file.write(f"Fit Type: {fit_type}\n\n")
         
@@ -115,9 +115,9 @@ def log_results(file_name, B_eq, z, remnant_range, fit_type, params, ages):
         log_file.write(f"break_predict    : {10**(params[1]):.6f} (Hz)\n")
         log_file.write(f"dbreak_predict   : {10**(params[2]):.6f} (Hz)\n")
         log_file.write(f"inject_predict(s)   : {params[3]:.6f} (dimensionless)\n")
-        log_file.write(f"dinject_predict  : {params[4]:.6f} (dimensionless)\n")
-        log_file.write(f"remnant_predict  : {params[5]:.6f} (dimensionless)\n")
-        log_file.write(f"dremnant_predict : {params[6]:.6f} (dimensionless)\n")
+        log_file.write(f"dinject_predict  : {params[4]:.6f}\n")
+        log_file.write(f"remnant_predict  : {params[5]:.6f}\n")
+        log_file.write(f"dremnant_predict : {params[6]:.6f}\n")
         
         # Log the spectral ages
         log_file.write("Spectral Ages:\n")
