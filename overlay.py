@@ -11,7 +11,8 @@ from astropy.visualization import wcsaxes
 import argparse
 plt.style.use('seaborn-v0_8-bright')
 plt.rcParams["font.family"] = "serif"
-def main(infrared_fits, radio_fits, rms, coords_file):
+
+def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     # Load the infrared image
     with fits.open(infrared_fits) as ir_hdul:
         ir_data = ir_hdul[0].data
@@ -22,6 +23,11 @@ def main(infrared_fits, radio_fits, rms, coords_file):
         radio_data = radio_hdul[0].data
         radio_wcs = WCS(radio_hdul[0].header)
         radio_header = radio_hdul[0].header  # Store the header for later use
+    # Load the contour image
+    with fits.open(contour_fits) as contour_hdul:
+        contour_data = contour_hdul[0].data
+        contour_wcs = WCS(contour_hdul[0].header,naxis=2)
+        contour_header = contour_hdul[0].header
 
     # Load the coordinates from the text file
     coords_list = []
@@ -34,17 +40,18 @@ def main(infrared_fits, radio_fits, rms, coords_file):
                            dec=[c[1] for c in coords_list] * u.deg, frame='fk5')
 
     # Create a boolean mask for values greater than 6*rms
-    mask = radio_data > 6 * rms
+    mask = radio_data > 3 * rms_r
     radio_masked = np.where(mask, radio_data, np.nan)
 
     # Reproject the infrared image to match the radio WCS and shape
     ir_reproj, _ = reproject_interp((ir_data, ir_wcs), radio_wcs, shape_out=radio_data.shape)
-
+    # Repoject the contour image to match the radio WCS and shape 
+    cont_reproj, _ = reproject_interp((contour_data, contour_wcs), radio_wcs, shape_out=radio_data.shape)
     # Create the figure and axis with the radio image's WCS projection
     fig, ax = plt.subplots(figsize=(7, 5), subplot_kw={'projection': radio_wcs})
 
     # Plot the reprojected infrared image
-    ax.imshow(ir_reproj, cmap='gray_r', origin='lower',
+    ax.imshow(ir_reproj, cmap='gray', origin='lower',
               vmin=np.percentile(ir_reproj, 5),
               vmax=np.percentile(ir_reproj, 99.5))
 
@@ -61,9 +68,10 @@ def main(infrared_fits, radio_fits, rms, coords_file):
     ax.tick_params(axis='y', which='both', labelcolor='black')
 
     # Plot radio contours
-    contour_lvls = np.array([-3, 6, 9, 12, 15, 18, 21, 24, 27, 30]) * rms
-    ax.contour(radio_data, levels=contour_lvls, cmap='YlOrRd', linewidths=0.8, alpha=0.95)
-
+    contour_lvls = np.array([-3, 6, 9, 12, 15, 18, 21, 24, 27, 30]) * rms_c
+    ax.contour(cont_reproj, levels=contour_lvls, cmap='YlOrRd', linewidths=0.8, alpha=0.65,transform=ax.get_transform(radio_wcs))
+    ax.contour(radio_data, levels=contour_lvls, cmap='YlOrRd', linewidths=0.8, alpha=0.65,transform=ax.get_transform(radio_wcs))
+    
     # Mark possible host galaxy positions with 'X' and number them
     for c in host_coords:
         ax.plot(c.ra.deg, c.dec.deg,marker='x', color='cyan',transform=ax.get_transform('fk5'), markersize=10)
@@ -90,11 +98,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Overlay radio contours on an infrared image and mark possible host galaxies.')
     parser.add_argument('--infrared', required=True, help='Path to the infrared FITS image')
     parser.add_argument('--radio', required=True, help='Path to the radio FITS image')
-    parser.add_argument('--rms', type=float, required=True, help='RMS value of the radio image')
+    parser.add_argument('--rms_r', type=float, required=True, help='RMS value of the radio image')
+    parser.add_argument('--contour',required=True,help="Path to the contour FITS image")
+    parser.add_argument('--rms_c', type=float, required=True, help='RMS value of the radio image')
     parser.add_argument('--coords', required=True, help='Path to the text file containing host galaxy coordinates')
 
     args = parser.parse_args()
 
     # Call the main function with parsed arguments
-    main(args.infrared, args.radio, args.rms, args.coords)
+    main(args.infrared, args.radio, args.rms_r, args.rms_c, args.contour, args.coords)
 
