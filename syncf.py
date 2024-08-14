@@ -114,7 +114,7 @@ def log_results(file_name, B_eq, z, remnant_range, fit_type, params, ages):
         log_file.write(f"fit_type         : {fit_type}\n")
         log_file.write(f"break_predict    : {10**(params[1]):.6f} (Hz)\n")
         log_file.write(f"dbreak_predict   : {10**(params[2]):.6f} (Hz)\n")
-        log_file.write(f"inject_predict(s)   : {params[3]:.6f} (dimensionless)\n")
+        log_file.write(f"inject_predict(s)   : {params[3]:.6f}\n")
         log_file.write(f"dinject_predict  : {params[4]:.6f}\n")
         log_file.write(f"remnant_predict  : {params[5]:.6f}\n")
         log_file.write(f"dremnant_predict : {params[6]:.6f}\n")
