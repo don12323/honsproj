@@ -67,10 +67,10 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     ax.tick_params(axis='x', which='both', labelcolor='black')
     ax.tick_params(axis='y', which='both', labelcolor='black')
 
-    # Plot radio contours
+    # Plot radio contours 'YlOrd'
     contour_lvls = np.array([3, 6, 9, 12, 15, 18, 21, 24]) * rms_c
     ax.contour(cont_reproj, levels=contour_lvls, cmap='YlOrRd', linewidths=0.8, alpha=0.7,transform=ax.get_transform(radio_wcs))
-    ax.contour(radio_data, levels=[3 * rms_r], cmap='inferno', linewidths=1, alpha=0.6,transform=ax.get_transform(radio_wcs))
+    ax.contour(radio_data, levels=[3 * rms_r], linewidths=1,cmap='inferno', alpha=0.6,transform=ax.get_transform(radio_wcs))
     
     # Mark possible host galaxy positions with 'X' and number them
     for i, c in enumerate(host_coords,start=1):
