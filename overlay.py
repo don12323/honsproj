@@ -42,7 +42,7 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
 
     # Create mask for values greater than 3*rms
     mask = radio_data > 3 * rms_r
-    radio_masked = np.where(mask, radio_data, np.min(radio_data))
+    radio_masked = np.where(mask, radio_data, np.nan) #np.min(radio_data)
 
     # Reproject infrared im to match the radio WCS and shape
     ir_reproj, _ = reproject_interp((ir_data, ir_wcs), radio_wcs, shape_out=radio_data.shape)
@@ -62,7 +62,7 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     ax.set_ylabel('Dec. (J2000)')
 
     # Overlay masked radio im in mJy #TODO 
-    ax.imshow(radio_masked * 1e3, cmap='inferno', origin='lower', alpha=0.4)
+    ax.imshow(radio_masked * 1e3, cmap='magma', origin='lower', alpha=0.8)
             #vmin=np.percentile(radio_masked,0),
             #vmax=np.percentile(radio_masked,99.9))
 
