@@ -9,6 +9,7 @@ from astropy.coordinates import SkyCoord
 import astropy.units as u
 from astropy.visualization import wcsaxes
 import argparse
+from scipy.ndimage import gaussian_filter
 
 plt.style.use('seaborn-v0_8-bright')
 plt.rcParams["font.family"] = "serif"
@@ -42,7 +43,7 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
 
     # Create mask for values greater than 3*rms
     mask = radio_data > 3 * rms_r
-    radio_masked = np.where(mask, radio_data, np.nan) #np.min(radio_data)
+    radio_masked = np.where(mask, radio_data, np.min(radio_data)) #np.min(radio_data)
 
     # Reproject infrared im to match the radio WCS and shape
     ir_reproj, _ = reproject_interp((ir_data, ir_wcs), radio_wcs, shape_out=radio_data.shape)
@@ -61,8 +62,9 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     ax.set_xlabel('R.A. (J2000)')
     ax.set_ylabel('Dec. (J2000)')
 
-    # Overlay masked radio im in mJy #TODO 
-    ax.imshow(radio_masked * 1e3, cmap='magma', origin='lower', alpha=0.8)
+    # Overlay masked radio im in mJy  
+    ax.imshow(radio_masked * 1e3, cmap='inferno', origin='lower', 
+            alpha=gaussian_filter(mask.astype(float), sigma=3)*0.85) # Blend from 0.9 alpha
             #vmin=np.percentile(radio_masked,0),
             #vmax=np.percentile(radio_masked,99.9))
 
