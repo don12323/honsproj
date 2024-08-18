@@ -9,6 +9,7 @@ from astropy.coordinates import SkyCoord
 import astropy.units as u
 from astropy.visualization import wcsaxes
 import argparse
+from scipy.ndimage import gaussian_filter
 
 plt.style.use('seaborn-v0_8-bright')
 plt.rcParams["font.family"] = "serif"
@@ -42,18 +43,20 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
 
     # Create mask for values greater than 3*rms
     mask = radio_data > 3 * rms_r
-    radio_masked = np.where(mask, radio_data, np.min(radio_data))
+    blurred_mask = gaussian_filter(mask.astype(float), sigma=3)
+    radio_masked = np.where(mask, radio_data, np.nan)
+    radio_blended = np.nan_to_num(radio_masked) * blurred_mask
 
     # Reproject infrared im to match the radio WCS and shape
-    #ir_reproj, _ = reproject_interp((ir_data, ir_wcs), radio_wcs, shape_out=radio_data.shape)
+    ir_reproj, _ = reproject_interp((ir_data, ir_wcs), radio_wcs, shape_out=radio_data.shape)
     # Repoject contour im to match the radio WCS and shape 
     #cont_reproj, _ = reproject_interp((contour_data, contour_wcs), radio_wcs, shape_out=radio_data.shape)
     # Use radio im WCS projection
     #fig, ax = plt.subplots(figsize=(7, 5), subplot_kw={'projection': radio_wcs})
     fig = plt.figure(figsize=(7, 5))
-    ax = fig.add_subplot(111, projection=ir_wcs)
+    ax = fig.add_subplot(111, projection=radio_wcs)
     # Plot the reprojected infrared im #TODO Interpolation messes up the infrared image in some cases
-    ax.imshow(ir_data, cmap='gray', origin='lower',
+    ax.imshow(ir_reproj, cmap='gray', origin='lower',
               vmin=np.percentile(ir_data, 1),
               vmax=np.percentile(ir_data, 98.7))
 
@@ -62,7 +65,7 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     ax.set_ylabel('Dec. (J2000)')
 
     # Overlay masked radio im in mJy #TODO 
-    ax.imshow(radio_masked * 1e3, cmap='inferno', origin='lower', alpha=0.4, transform=ax.get_transform(radio_wcs))
+    ax.imshow(radio_blended * 1e3, cmap='magma', origin='lower', alpha=0.8)
             #vmin=np.percentile(radio_masked,0),
             #vmax=np.percentile(radio_masked,99.9))
 
@@ -73,7 +76,7 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     # Plot radio contours 'YlOrd'
     contour_lvls = np.array([3, 6, 9, 12, 15, 18, 21, 24]) * rms_c
     ax.contour(contour_data, levels=contour_lvls, cmap='YlOrRd', linewidths=0.5, alpha=0.7,transform=ax.get_transform(contour_wcs))
-    ax.contour(radio_data, levels=[3 * rms_r], linewidths=1,cmap='inferno', alpha=0.6,transform=ax.get_transform(radio_wcs))
+    #ax.contour(radio_data, levels=[3 * rms_r], linewidths=1,cmap='inferno', alpha=0.6,transform=ax.get_transform(radio_wcs))
     
     # Mark possible hg positions
     for i, c in enumerate(host_coords,start=1):
