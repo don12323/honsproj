@@ -56,7 +56,7 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     # Plot the reprojected infrared im #TODO Interpolation messes up the infrared image in some cases
     ax.imshow(ir_reproj, cmap='gray', origin='lower',
               vmin=np.percentile(ir_reproj, 8),
-              vmax=np.percentile(ir_reproj, 98.5))
+              vmax=np.percentile(ir_reproj, 98.7))
 
 
     ax.set_xlabel('R.A. (J2000)')
@@ -64,7 +64,7 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
 
     # Overlay masked radio im in mJy  
     ax.imshow(radio_masked * 1e3, cmap='magma', origin='lower', 
-            alpha=gaussian_filter(mask.astype(float), sigma=3)*0.65) # Blend from 0.9 alpha
+            alpha=gaussian_filter(mask.astype(float), sigma=3)*0.7) # Blend from 0.9 alpha
             #vmin=np.percentile(radio_masked,0),
             #vmax=np.percentile(radio_masked,99.9))
 
@@ -74,7 +74,10 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
 
     # Plot radio contours 'YlOrd'
     #contour_lvls = np.array([3, 6, 9, 12, 15, 18, 21, 24]) * rms_c
-    contour_lvls = np.array([i for i in range(3,27,3)]) * rms_c
+    #contour_lvls = np.array([i for i in range(3,69,9)]) * rms_c
+
+    contour_lvls = np.logspace(np.log10(3), np.log10(22), num=int((np.log10(22) - np.log10(3)) / 0.15 +1)) * rms_c
+    print(contour_lvls/rms_c)
     ax.contour(contour_data, levels=contour_lvls, cmap='YlOrRd', linewidths=0.5, alpha=0.7,transform=ax.get_transform(contour_wcs))
 #    ax.contour(radio_data, levels=[3 * rms_r], linewidths=1,cmap='inferno', alpha=0.6,transform=ax.get_transform(radio_wcs))
     
@@ -84,12 +87,11 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
         if len(host_coords) > 1:
             ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='cyan', transform=ax.get_transform('fk5'), fontsize=8, ha='left', va='top')
 
-    # Add synthesized beam #TODO Show beams at a common center(maybe show it manually??)
-    wcsaxes.add_beam(ax, header=contour_header,alpha=0.6)
-    wcsaxes.add_beam(ax,header=radio_header,alpha=0.6, color='orange')
-
+    # Add synthesized beam
+    wcsaxes.add_beam(ax, header=contour_header,alpha=0.8,pad=0.4)
+    wcsaxes.add_beam(ax,header=radio_header,alpha=0.8, color='orange',pad=0.6) 
     # Add the radio image color bar
-    cbar = fig.colorbar(ax.images[-1], ax=ax, shrink=1, pad=0.04)
+    cbar = fig.colorbar(ax.images[-1], ax=ax, shrink=1, pad=0.01) #pad=0.04
     cbar.set_label('Brightness (mJy/beam)')
 
     # Adjust layout and display the plot
