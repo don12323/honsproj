@@ -36,14 +36,14 @@ def plot_first_four_sources(fits_files, output_file):
 
         # Plot spectral index map
         ax1 = fig.add_subplot(4, 3, i * 3 + 1, projection=wcs)
-        im1 = ax1.imshow(spectral_index_map, origin='lower', cmap='gist_rainbow_r', interpolation='none', vmin=-4, vmax=-0.5)
-        ax1.contour(image, levels=contour_levels, colors='black', alpha=0.5, transform=ax1.get_transform(wcs))
+        im1 = ax1.imshow(spectral_index_map, origin='lower', cmap='inferno', interpolation='none', vmin=-4, vmax=-0.5) #gist_rainbow_r
+        ax1.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax1.get_transform(wcs))
         ax1.tick_params(direction='in') #width=2
         if i == 0:
             ax1.set_title('Spectral Index')
-        ax1.coords[0].set_axislabel('RA(J2000)')
-        ax1.coords[1].set_axislabel('Dec(J2000)')
-        cbar1 = fig.colorbar(im1, ax=ax1, orientation='vertical', pad=0.05, shrink=0.91)
+        ax1.coords[0].set_axislabel('R.A. (J2000)')
+        ax1.coords[1].set_axislabel('Dec. (J2000)')
+        cbar1 = fig.colorbar(im1, ax=ax1, orientation='vertical', pad=0.04, shrink=0.94)
         # Label
         ax1.text(0.02, 0.95, labels[i], transform=ax1.transAxes, fontsize=14, fontweight='bold',va='top', ha='left')
         #TODO axis width doesnt work
@@ -52,27 +52,27 @@ def plot_first_four_sources(fits_files, output_file):
 
         # Spectral index error map
         ax2 = fig.add_subplot(4, 3, i * 3 + 2, projection=wcs)
-        im2 = ax2.imshow(spectral_index_error_map, origin='lower', cmap='gist_rainbow_r', interpolation='none', norm=LogNorm())
-        ax2.contour(image, levels=contour_levels, colors='black', alpha=0.5, transform=ax2.get_transform(wcs))
+        im2 = ax2.imshow(spectral_index_error_map, origin='lower', cmap='inferno', interpolation='none', norm=LogNorm())
+        ax2.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax2.get_transform(wcs))
         ax2.tick_params(direction='in')
         if i == 0:
             ax2.set_title('Spectral Index Error')
-        ax2.coords[0].set_axislabel('RA(J2000)')
+        ax2.coords[0].set_axislabel('R.A. (J2000)')
         ax2.coords[1].set_ticklabel_visible(False)
         ax2.coords[1].set_axislabel('')
-        cbar2 = fig.colorbar(im2, ax=ax2, orientation='vertical', pad=0.05, shrink=0.91)
+        cbar2 = fig.colorbar(im2, ax=ax2, orientation='vertical', pad=0.04, shrink=0.94)
         
         # Chi2red map
         ax3 = fig.add_subplot(4, 3, i * 3 + 3, projection=wcs)
-        im3 = ax3.imshow(chi2red_map, origin='lower', cmap='inferno', interpolation='none', norm=LogNorm())
-        ax3.contour(image, levels=contour_levels, colors='black', alpha=0.5, transform=ax3.get_transform(wcs))
+        im3 = ax3.imshow(chi2red_map, origin='lower', cmap='viridis', interpolation='none', norm=LogNorm())
+        ax3.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax3.get_transform(wcs))
         ax3.tick_params(direction='in')
         if i == 0:
             ax3.set_title('Reduced Chi-Square')
-        ax3.coords[0].set_axislabel('RA(J2000)')
+        ax3.coords[0].set_axislabel('R.A. (J2000)')
         ax3.coords[1].set_ticklabel_visible(False)
         ax3.coords[1].set_axislabel('')
-        cbar3 = fig.colorbar(im3, ax=ax3, orientation='vertical', pad=0.05, shrink=0.91)
+        cbar3 = fig.colorbar(im3, ax=ax3, orientation='vertical', pad=0.04, shrink=0.94)
         
         # Plot hg coords
         axes = [ax1, ax2, ax3]
@@ -107,36 +107,36 @@ def plot_remaining_sources(fits_files, output_file):
 
         # spectral index map
         ax1 = fig.add_subplot(3, 3, i * 3 + 1, projection=wcs)
-        im1 = ax1.imshow(spectral_index_map, origin='lower', cmap='winter', interpolation='none', vmin=-2.5, vmax=-0.5) #gist rainbow
-        ax1.contour(image, levels=contour_levels, colors='black', alpha=0.5, transform=ax1.get_transform(wcs))
+        im1 = ax1.imshow(spectral_index_map, origin='lower', cmap='inferno', interpolation='none', vmin=-2.5, vmax=-0.5) #gist rainbow
+        ax1.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax1.get_transform(wcs))
         ax1.tick_params(direction='in')
         if i == 0:
             ax1.set_title('Spectral Index')
-        ax1.coords[0].set_axislabel('RA(J2000)')
-        ax1.coords[1].set_axislabel('Dec(J2000)')
-        cbar1 = fig.colorbar(im1, ax=ax1, orientation='vertical', pad=0.05, shrink=0.91)
+        ax1.coords[0].set_axislabel('R.A. (J2000)')
+        ax1.coords[1].set_axislabel('Dec. (J2000)')
+        cbar1 = fig.colorbar(im1, ax=ax1, orientation='vertical', pad=0.04, shrink=0.91)
         # Label
         ax1.text(0.02, 0.95, labels[i], transform=ax1.transAxes, fontsize=14, fontweight='bold', va='top', ha='left')
         # spectral index error map
         ax2 = fig.add_subplot(3, 3, i * 3 + 2, projection=wcs)
-        im2 = ax2.imshow(spectral_index_error_map, origin='lower', cmap='cool', interpolation='none', norm=LogNorm())
-        ax2.contour(image, levels=contour_levels, colors='black', alpha=0.5, transform=ax2.get_transform(wcs))
+        im2 = ax2.imshow(spectral_index_error_map, origin='lower', cmap='inferno', interpolation='none', norm=LogNorm())
+        ax2.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax2.get_transform(wcs))
         ax2.tick_params(direction='in')
         if i == 0:
             ax2.set_title('Spectral Index Error')
-        ax2.coords[0].set_axislabel('RA(J2000)')
+        ax2.coords[0].set_axislabel('R.A. (J2000)')
         ax2.coords[1].set_ticklabel_visible(False)
         ax2.coords[1].set_axislabel('')
-        cbar2 = fig.colorbar(im2, ax=ax2, orientation='vertical', pad=0.05, shrink=0.91)
+        cbar2 = fig.colorbar(im2, ax=ax2, orientation='vertical', pad=0.04, shrink=0.91)
         
         # chi2red map
         ax3 = fig.add_subplot(3, 3, i * 3 + 3, projection=wcs)
         im3 = ax3.imshow(chi2red_map, origin='lower', cmap='viridis', interpolation='none', norm=LogNorm())
-        ax3.contour(image, levels=contour_levels, colors='black', alpha=0.5, transform=ax3.get_transform(wcs))
+        ax3.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax3.get_transform(wcs))
         ax3.tick_params(direction='in')
         if i == 0:
             ax3.set_title('Reduced Chi-Square')
-        ax3.coords[0].set_axislabel('RA(J2000)')
+        ax3.coords[0].set_axislabel('R.A. (J2000)')
         ax3.coords[1].set_ticklabel_visible(False)
         ax3.coords[1].set_axislabel('')
         cbar3 = fig.colorbar(im3, ax=ax3, orientation='vertical', pad=0.05, shrink=0.91)
