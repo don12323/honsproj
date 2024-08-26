@@ -76,7 +76,7 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     #contour_lvls = np.array([3, 6, 9, 12, 15, 18, 21, 24]) * rms_c
     #contour_lvls = np.array([i for i in range(3,69,9)]) * rms_c
 
-    contour_lvls = np.logspace(np.log10(3), np.log10(22), num=int((np.log10(22) - np.log10(3)) / 0.15 +1)) * rms_c
+    contour_lvls = np.logspace(np.log10(3), np.log10(25), num=int((np.log10(25) - np.log10(3)) / 0.18 +1)) * rms_c
     print(contour_lvls/rms_c)
     ax.contour(contour_data, levels=contour_lvls, cmap='YlOrRd', linewidths=0.5, alpha=0.7,transform=ax.get_transform(contour_wcs))
 #    ax.contour(radio_data, levels=[3 * rms_r], linewidths=1,cmap='inferno', alpha=0.6,transform=ax.get_transform(radio_wcs))
@@ -93,7 +93,22 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     # Add the radio image color bar
     cbar = fig.colorbar(ax.images[-1], ax=ax, shrink=1, pad=0.01) #pad=0.04
     cbar.set_label('Brightness (mJy/beam)')
+    
+    # add scale bar
+    # Define the scale: 7.8 kpc per arcsecond
+    kpc_per_arcsec = 4.671 * u.kpc / u.arcsec
 
+    # Desired scale bar length in kpc
+    scale_length_kpc = 100 * u.kpc
+    scale_length_arcsec = scale_length_kpc / kpc_per_arcsec
+
+    # Convert to angular scale (arcseconds)
+    scale_length_arcsec = (scale_length_kpc / kpc_per_arcsec).to(u.arcsec)
+    scale_length_deg = scale_length_arcsec.to(u.deg)
+    # Add the scale bar to the plot using add_scalebar
+
+    wcsaxes.add_scalebar(ax, length=scale_length_deg, label=f'{scale_length_kpc.value:.0f} kpc',
+            corner='bottom right', frame=False, color='white')
     # Adjust layout and display the plot
     fig.tight_layout()
     plt.show()
