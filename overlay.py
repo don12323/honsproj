@@ -19,7 +19,6 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     with fits.open(infrared_fits) as ir_hdul:
         ir_data = ir_hdul[0].data
         ir_wcs = WCS(ir_hdul[0].header)
-
     # Radio image
     with fits.open(radio_fits) as radio_hdul:
         radio_data = radio_hdul[0].data
