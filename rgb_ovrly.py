@@ -76,7 +76,7 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
 
     # Overlay masked radio im in mJy  
     ax.imshow(radio_interp * 1e3, cmap='magma', origin='lower',
-            alpha=gaussian_filter(mask.astype(float), sigma=3)*0.9) # Blend from 0.9 alpha
+            alpha=gaussian_filter(mask.astype(float), sigma=3)*0.8) # Blend from 0.9 alpha
             #vmin=np.percentile(radio_masked,0.1),
             #vmax=np.percentile(radio_masked,99.9))
     print(f'{gaussian_filter(mask.astype(float), sigma=2)*0.9}')
@@ -131,7 +131,7 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
 if __name__ == "__main__":
     # Argument parser setup
     parser = argparse.ArgumentParser(description='Overlay radio contours on its optical counterpart and mark possible host galaxies.')
-    parser.add_argument('--rbg', required=True, help='Path to the rbg FITS image')
+    parser.add_argument('--rgb', required=True, help='Path to the rbg FITS image')
     parser.add_argument('--radio', required=True, help='Path to the radio FITS image')
     parser.add_argument('--rms_r', type=float, required=True, help='RMS value of the radio image')
     parser.add_argument('--contour',required=True,help="Path to the contour FITS image")
@@ -141,5 +141,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Call the main function with parsed arguments
-    main(args.infrared, args.radio, args.rms_r, args.rms_c, args.contour, args.coords)
+    main(args.rgb, args.radio, args.rms_r, args.rms_c, args.contour, args.coords)
 
