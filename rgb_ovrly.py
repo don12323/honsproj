@@ -11,8 +11,18 @@ from astropy.visualization import wcsaxes
 import argparse
 from scipy.ndimage import gaussian_filter
 
+from astropy.visualization import PercentileInterval
+from astropy.visualization import AsinhStretch
+
 plt.style.use('seaborn-v0_8-bright')
 plt.rcParams["font.family"] = "serif"
+
+# got the normalize function from Natasha
+def normalize(arr, vmin, vmax):
+    nor = (arr - vmin) / (vmax - vmin)
+    nor[np.where(nor<0.0)] = 0.0
+    nor[np.where(nor>1.0)] = 1.0
+    return nor**2
 
 def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     # Infrared image
@@ -45,10 +55,18 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
 
     # Create mask for values greater than 3*rms
     
+    # normalize
+    pct = 99.5
+    interval = PercentileInterval(pct)
+    stretch = AsinhStretch(a=0.1)
 
-    r = ir_data[0]
-    g = ir_data[1]
-    b = ir_data[2]
+    i = interval.get_limits(ir_data[0])
+    r = normalize(ir_data[0], *i)
+    i = interval.get_limits(ir_data[1])
+    g = normalize(ir_data[1], *i)
+    i = interval.get_limits(ir_data[2])
+    b = normalize(ir_data[2], *i)
+
     rgb_im = np.dstack([r, g, b])
 
 
@@ -65,10 +83,8 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     #plotting----------------------------------------
     fig = plt.figure(figsize=(7, 5))
     ax = fig.add_subplot(111, projection=ir_wcs)
-    # Plot the reprojected infrared im #TODO Interpolation messes up the infrared image in some cases
-    ax.imshow(rgb_im, origin='lower',
-              vmin=np.percentile(rgb_im, 20),
-              vmax=np.percentile(rgb_im, 99.7))
+    # Plot the rgb im #TODO Interpolation messes up the infrared image in some cases
+    ax.imshow(rgb_im, origin='lower')
 
 
     ax.set_xlabel('R.A. (J2000)')
@@ -76,7 +92,7 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
 
     # Overlay masked radio im in mJy  
     ax.imshow(radio_interp * 1e3, cmap='magma', origin='lower',
-            alpha=gaussian_filter(mask.astype(float), sigma=3)*0.8) # Blend from 0.9 alpha
+            alpha=gaussian_filter(mask.astype(float), sigma=3)*0.9) # Blend from 0.9 alpha
             #vmin=np.percentile(radio_masked,0.1),
             #vmax=np.percentile(radio_masked,99.9))
     print(f'{gaussian_filter(mask.astype(float), sigma=2)*0.9}')
@@ -89,10 +105,9 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     #contour_lvls = np.array([3, 6, 9, 12, 15, 18, 21, 24]) * rms_c
     #contour_lvls = np.array([i for i in range(3,69,9)]) * rms_c
 
-    contour_lvls = np.logspace(np.log10(3), np.log10(15), num=int((np.log10(15) - np.log10(3)) / 0.15 +1)) * rms_c
+    contour_lvls = np.logspace(np.log10(3), np.log10(10), num=int((np.log10(10) - np.log10(3)) / 0.15 +1)) * rms_c
     print(contour_lvls/rms_c)
     ax.contour(contour_data, levels=contour_lvls, cmap='YlOrRd', linewidths=0.5, alpha=0.7,transform=ax.get_transform(contour_wcs))
-#    ax.contour(radio_data, levels=[3 * rms_r], linewidths=1,cmap='inferno', alpha=0.6,transform=ax.get_transform(radio_wcs))
     
     # Mark possible hg positions
     for i, c in enumerate(host_coords,start=1):
@@ -101,7 +116,7 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
             ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='cyan', transform=ax.get_transform('fk5'), fontsize=8, ha='left', va='top')
 
     # Add synthesized beam
-    wcsaxes.add_beam(ax, header=contour_header,alpha=0.8,pad=0.65)
+    wcsaxes.add_beam(ax, header=contour_header,alpha=0.8,pad=0.65, frame=True)
     wcsaxes.add_beam(ax,header=radio_header,alpha=0.8, color='orange',pad=0.65) 
     # Add the radio image color bar
     cbar = fig.colorbar(ax.images[-1], ax=ax, shrink=1, pad=0.01) #pad=0.04
@@ -110,7 +125,7 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     kpc_per_arcsec = 5.141 * u.kpc / u.arcsec
 
     # Scale bar length in kpc
-    scale_length_kpc = 100 * u.kpc
+    scale_length_kpc = 150 * u.kpc
     scale_length_arcsec = scale_length_kpc / kpc_per_arcsec
 
     # Convert to angular scale (arcseconds)
