@@ -91,8 +91,8 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     ax.set_ylabel('Dec. (J2000)')
 
     # Overlay masked radio im in mJy  
-    ax.imshow(radio_interp * 1e3, cmap='magma', origin='lower',
-            alpha=gaussian_filter(mask.astype(float), sigma=3)*0.9) # Blend from 0.9 alpha
+    ax.imshow(radio_interp * 1e3, cmap='magma', origin='lower', #gist_heat
+            alpha=gaussian_filter(mask.astype(float), sigma=5)*0.9) # Blend from 0.9 alpha
             #vmin=np.percentile(radio_masked,0.1),
             #vmax=np.percentile(radio_masked,99.9))
     print(f'{gaussian_filter(mask.astype(float), sigma=2)*0.9}')
@@ -107,7 +107,7 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
 
     contour_lvls = np.logspace(np.log10(3), np.log10(10), num=int((np.log10(10) - np.log10(3)) / 0.15 +1)) * rms_c
     print(contour_lvls/rms_c)
-    ax.contour(contour_data, levels=contour_lvls, cmap='YlOrRd', linewidths=0.5, alpha=0.7,transform=ax.get_transform(contour_wcs))
+    #ax.contour(contour_data, levels=contour_lvls, cmap='YlOrRd', linewidths=0.5, alpha=0.7,transform=ax.get_transform(contour_wcs))
     
     # Mark possible hg positions
     for i, c in enumerate(host_coords,start=1):
