@@ -59,7 +59,7 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     # normalize
     pct = 99.6
     interval = PercentileInterval(pct)
-    stretch = PowerDistStretch(a=2000) + AsinhStretch(a=0.1)    #makes bkg noise worse
+    stretch = AsinhStretch(a=0.05) + PowerDistStretch(a=1200)   #makes bkg noise worse
 
     i = interval.get_limits(ir_data[0])
     r = stretch(normalize(ir_data[0], *i))
