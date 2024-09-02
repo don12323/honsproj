@@ -13,24 +13,25 @@ from scipy.ndimage import gaussian_filter
 
 from astropy.visualization import PercentileInterval
 from astropy.visualization import AsinhStretch
+from astropy.visualization import PowerDistStretch
 
 plt.style.use('seaborn-v0_8-bright')
 plt.rcParams["font.family"] = "serif"
 
-# got the normalize function from Natasha
+# Got the normalize function from code that Natasha gave
 def normalize(arr, vmin, vmax):
     nor = (arr - vmin) / (vmax - vmin)
     nor[np.where(nor<0.0)] = 0.0
     nor[np.where(nor>1.0)] = 1.0
-    return nor**2
+    return nor # Added square scaling for bkg noise
 
-def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
-    # Infrared image
-    with fits.open(infrared_fits) as ir_hdul:
+def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
+    # RGB image
+    with fits.open(rgb_fits) as ir_hdul:
         ir_data = ir_hdul[0].data
         ir_wcs = WCS(ir_hdul[0].header,naxis=2)
     
-    # Create rbg stack
+    
     print(f'rgb fits data shape: {ir_data.shape}')
     # Radio image
     with fits.open(radio_fits) as radio_hdul:
@@ -56,25 +57,25 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     # Create mask for values greater than 3*rms
     
     # normalize
-    pct = 99.5
+    pct = 99.6
     interval = PercentileInterval(pct)
-    stretch = AsinhStretch(a=0.1)
+    stretch = PowerDistStretch(a=2000) + AsinhStretch(a=0.1)    #makes bkg noise worse
 
     i = interval.get_limits(ir_data[0])
-    r = normalize(ir_data[0], *i)
+    r = stretch(normalize(ir_data[0], *i))
     i = interval.get_limits(ir_data[1])
-    g = normalize(ir_data[1], *i)
+    g = stretch(normalize(ir_data[1], *i))
     i = interval.get_limits(ir_data[2])
-    b = normalize(ir_data[2], *i)
-
+    b = stretch(normalize(ir_data[2], *i))
+    # Create rgb stack
     rgb_im = np.dstack([r, g, b])
 
 
+    # Reproject radio im to match the rgb WCS and shape
     radio_interp,_ = reproject_interp((radio_data, radio_wcs),ir_wcs, shape_out=r.shape)
     mask = radio_interp > 3 * rms_r
-    radio_masked = np.where(mask, radio_interp, np.min(radio_data)) #TODO np.min(radio_data)) somehow doing gaussian blending makes image dissapear completely
-    # Reproject infrared im to match the radio WCS and shape
-    #ir_reproj, _ = reproject_interp((rgb_im, ir_wcs), radio_wcs) #shape_out=(3,radio_data.shape[0],radio_data.shape[1]))
+    radio_masked = np.where(mask, radio_interp, np.min(radio_data)) #np.min(radio_data)) 
+    
     print(f'slice shape: {r.shape}')
     print('rbg wcs:', ir_wcs)
     print('radio wcs:', radio_wcs)
@@ -92,60 +93,53 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
 
     # Overlay masked radio im in mJy  
     ax.imshow(radio_interp * 1e3, cmap='magma', origin='lower', #gist_heat
-            alpha=gaussian_filter(mask.astype(float), sigma=5)*0.9) # Blend from 0.9 alpha
-            #vmin=np.percentile(radio_masked,0.1),
-            #vmax=np.percentile(radio_masked,99.9))
-    print(f'{gaussian_filter(mask.astype(float), sigma=2)*0.9}')
+            alpha=gaussian_filter(mask.astype(float), sigma=20)*0.9) # Blend from 0.9 alpha
 
     ax.tick_params(direction='in', colors='white')
     ax.tick_params(axis='x', which='both', labelcolor='black')
     ax.tick_params(axis='y', which='both', labelcolor='black')
 
     # Plot radio contours 'YlOrd'
-    #contour_lvls = np.array([3, 6, 9, 12, 15, 18, 21, 24]) * rms_c
-    #contour_lvls = np.array([i for i in range(3,69,9)]) * rms_c
-
     contour_lvls = np.logspace(np.log10(3), np.log10(10), num=int((np.log10(10) - np.log10(3)) / 0.15 +1)) * rms_c
     print(contour_lvls/rms_c)
-    #ax.contour(contour_data, levels=contour_lvls, cmap='YlOrRd', linewidths=0.5, alpha=0.7,transform=ax.get_transform(contour_wcs))
+    ax.contour(contour_data, levels=contour_lvls, cmap='YlOrRd', linewidths=0.5, alpha=0.4,transform=ax.get_transform(contour_wcs))
     
     # Mark possible hg positions
     for i, c in enumerate(host_coords,start=1):
         ax.plot(c.ra.deg, c.dec.deg,marker='x', color='cyan',transform=ax.get_transform('fk5'), markersize=8)
         if len(host_coords) > 1:
-            ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='cyan', transform=ax.get_transform('fk5'), fontsize=8, ha='left', va='top')
+            ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='cyan', 
+                    transform=ax.get_transform('fk5'), fontsize=8, ha='left', va='top')
 
     # Add synthesized beam
-    wcsaxes.add_beam(ax, header=contour_header,alpha=0.8,pad=0.65, frame=True)
+    wcsaxes.add_beam(ax, header=contour_header,alpha=0.8,pad=0.65, frame=False)
     wcsaxes.add_beam(ax,header=radio_header,alpha=0.8, color='orange',pad=0.65) 
-    # Add the radio image color bar
+    # Radio image color bar
     cbar = fig.colorbar(ax.images[-1], ax=ax, shrink=1, pad=0.01) #pad=0.04
     cbar.set_label('Brightness (mJy/beam)')
-
+    # Scale
     kpc_per_arcsec = 5.141 * u.kpc / u.arcsec
 
     # Scale bar length in kpc
     scale_length_kpc = 150 * u.kpc
     scale_length_arcsec = scale_length_kpc / kpc_per_arcsec
 
-    # Convert to angular scale (arcseconds)
-    scale_length_arcsec = (scale_length_kpc / kpc_per_arcsec).to(u.arcsec)
+    # Convert to deg
     scale_length_deg = scale_length_arcsec.to(u.deg)
+    
     # Add the scale bar
-
     wcsaxes.add_scalebar(ax, length=scale_length_deg, label=f'{scale_length_kpc.value:.0f} kpc',
             corner='bottom right', frame=False, color='white')
-    # Adjust layout and display the plot
+    
+    # Plot and save
     fig.tight_layout()
     plt.show()
-
-    # Save the figure to a file
-    fig.savefig('rbg_rad_ovrly.pdf')
+    fig.savefig('rgb_rad_ovrly.pdf')
+    fig.savefig('rgb_rad_ovrly.jpg',dpi=800)
 
 
 if __name__ == "__main__":
-    # Argument parser setup
-    parser = argparse.ArgumentParser(description='Overlay radio contours on its optical counterpart and mark possible host galaxies.')
+    parser = argparse.ArgumentParser(description='Overlay radio image on its optical counterpart and mark possible host galaxies.')
     parser.add_argument('--rgb', required=True, help='Path to the rbg FITS image')
     parser.add_argument('--radio', required=True, help='Path to the radio FITS image')
     parser.add_argument('--rms_r', type=float, required=True, help='RMS value of the radio image')
@@ -155,6 +149,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Call the main function with parsed arguments
     main(args.rgb, args.radio, args.rms_r, args.rms_c, args.contour, args.coords)
 
