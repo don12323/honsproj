@@ -14,6 +14,28 @@ plt.style.use('seaborn-v0_8-bright')
 plt.rcParams["font.family"] = "serif"
 
 # Define the function to read the .dat file
+def WLLS(S1, f1, Serr1):
+
+    f = np.log10(np.array(f1))
+    S = np.log10(np.array(S1))
+    Serr = np.array(Serr1) / np.array(S1)*np.log(10)
+
+    X = np.column_stack((np.ones_like(f), f))
+    W = np.diag(1/Serr**2)
+    XtWX = np.linalg.inv(X.T @ W @ X)
+    beta = XtWX @ X.T @ W @ S
+    r = S - X @ beta
+    df = len(f) - 2
+    sumR = np.sum(r**2)
+    sigma = sumR / df
+    beta_var = sigma * XtWX
+    stderr = np.sqrt(np.diag(beta_var))
+    chi2red = (r.T @ W @ r) / df
+    return beta[0], beta[1] , stderr[0], stderr[1], chi2red
+
+def powerlaw(amp,frequency,alpha):
+    return (10.0 **amp) * frequency ** alpha
+
 def read_dat_file(file_name):
     data = pd.read_csv(file_name, delimiter=',')
     obsname = data['Spectra'].values
@@ -25,7 +47,7 @@ def read_dat_file(file_name):
     return obsname, frequency, photometry, uncertainty
 
 
-def plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, params, ages):
+def plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, params, ages, WLLS_params):
     frequency, photometry, uncertainty = map(np.asarray, observed_data)
     plotting_frequency, plotting_data, err_plotting_data, plotting_data_min, plotting_data_max = map(np.asarray, plotting_data)
     model_data = np.asarray(model_data)
@@ -66,6 +88,15 @@ def plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, p
     ax.set_ylabel(r'Flux Density (Jy)')
     ax.tick_params(axis="both", which="major", direction="in", length=5, width=1.5, pad=5, right=True, top=True)
     ax.tick_params(axis="both", which="minor", direction="in", length=3, width=1.5, pad=5, right=True, top=True)
+	
+	# plot fitted line
+    if WLLS_params is not None:
+		#unpack WLLS params
+        amp, alpha, damp ,dalpha, chi2red = WLLS_params
+        fitted_phot = [powerlaw(amp,f,alpha) for f in plotting_frequency]
+        label_str = fr'$\alpha_{{4.5GHz}}^{{11.5GHz}} = {alpha:.1f} \pm {dalpha:.1f}$'
+        ax.plot(plotting_frequency,fitted_phot, '--', label=label_str)
+
     for spine in ax.spines.values():
         spine.set_linewidth(1.5)
  #   ax.grid(True)
@@ -88,7 +119,6 @@ def plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, p
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels, loc='upper right', fontsize=11, frameon=False)
     fig.tight_layout()
-    plt.show()
     plt.savefig(f'{fit_type}{model_suffix}_model_fit.pdf')
 	
 
@@ -166,7 +196,11 @@ def main(file_name, fit_type, B_eq, z, remnant_range, extra_data):
         frequency = np.append(frequency, extra_frequency)
         photometry = np.append(photometry, extra_photometry)
         uncertainty = np.append(uncertainty, extra_uncertainty)
-        print(obsname)
+		#WLLS
+        amp, alpha, damp ,dalpha, chi2red = WLLS(extra_photometry, extra_frequency, extra_uncertainty)
+        WLLS_params = (amp,alpha,damp,dalpha,chi2red)
+
+	
 
     # Prepare observed data tuple
     observed_data = (frequency, photometry, uncertainty)
@@ -185,7 +219,7 @@ def main(file_name, fit_type, B_eq, z, remnant_range, extra_data):
     params_ages = (params[0], 10**params[1], params[5])
     ages = spectral_ages(params_ages, B_eq, z)
 
-    plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, params, ages)
+    plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, params, ages, WLLS_params)
 
     log_results(file_name, B_eq, z, remnant_range, fit_type, params, ages)
 
