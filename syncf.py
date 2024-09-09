@@ -7,6 +7,7 @@ import argparse
 import matplotlib.pyplot as plt
 import os
 import datetime
+from scipy.optimize import curve_fit
 
 from sf.synchrofit import spectral_fitter, spectral_model_, spectral_ages
 plt.style.use('seaborn-v0_8-bright')
@@ -41,6 +42,7 @@ def plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, p
     
     fig, ax =plt.subplots(figsize=(7, 6))
 
+
     unq_obsname = np.unique(obsname)
     for name in unq_obsname:
         idx = obsname == name
@@ -52,7 +54,7 @@ def plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, p
             model_suffix = '-on'
         else:
             model_suffix = '-off'
-	 
+    
     # Plot model dat
     model_fit = ax.plot(plotting_frequency, plotting_data, 'k-', label=f'{fit_type}{model_suffix} Model fit')
     error_fit = ax.fill_between(plotting_frequency, plotting_data_min, plotting_data_max, color='blue', alpha=0.2, label='Model error')
@@ -86,6 +88,7 @@ def plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, p
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles, labels, loc='upper right', fontsize=11, frameon=False)
     fig.tight_layout()
+    plt.show()
     plt.savefig(f'{fit_type}{model_suffix}_model_fit.pdf')
 	
 
@@ -125,9 +128,10 @@ def log_results(file_name, B_eq, z, remnant_range, fit_type, params, ages):
         log_file.write(f"t_on  : {ages[1]:.6f} Myr\n")
         log_file.write(f"t_off : {ages[2]:.6f} Myr\n")
 
-def main(file_name, fit_type, B_eq, z, remnant_range):
+def main(file_name, fit_type, B_eq, z, remnant_range, extra_data):
     # Read the data
     obsname, frequency, photometry, uncertainty = read_dat_file(file_name)
+    obsname
     #calculate Beq
     #p = 0.5
     #alpha_thin = -1.66
@@ -154,6 +158,15 @@ def main(file_name, fit_type, B_eq, z, remnant_range):
     
     # Generate the model spectrum
     model_data, err_model_data, model_data_min, model_data_max = spectral_model_(params, frequency)
+
+    # Add extra data points
+    if extra_data is not None:
+        extra_obsname, extra_frequency, extra_photometry, extra_uncertainty = read_dat_file(extra_data)
+        obsname = np.append(obsname, extra_obsname)
+        frequency = np.append(frequency, extra_frequency)
+        photometry = np.append(photometry, extra_photometry)
+        uncertainty = np.append(uncertainty, extra_uncertainty)
+        print(obsname)
 
     # Prepare observed data tuple
     observed_data = (frequency, photometry, uncertainty)
@@ -184,8 +197,9 @@ if __name__ == "__main__":
     parser.add_argument("-z", type=float, required=True, help="Redshift of the source") 
     parser.add_argument("--remnant_range", dest='remnant_range', type=float, nargs='+', default=[0, 1],
                         help="(Default = [0, 1]) Accepted range for the remnant ratio")
+    parser.add_argument("--data2", type=str, required=False, help="Any extra data to be plotted but not fitted")
     args = parser.parse_args()
-    main(args.data, args.fit_type, args.B, args.z, args.remnant_range)
+    main(args.data,args.fit_type, args.B, args.z, args.remnant_range, args.data2)
 
 
 
