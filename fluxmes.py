@@ -269,7 +269,7 @@ if __name__ == "__main__":
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
     
-    reg_file = 'regs/flux_reg.reg'
+    reg_file = 'regs/bot_inner.reg' #flux_reg
     bkg_file = 'regs/bkg_flux_reg.reg'
     
 
