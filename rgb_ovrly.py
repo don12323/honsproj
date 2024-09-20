@@ -59,7 +59,7 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     # normalize
     pct = 99.6
     interval = PercentileInterval(pct)
-    stretch =AsinhStretch(a=0.05) + PowerDistStretch(a=500)  #makes bkg noise worse
+    stretch =AsinhStretch(a=0.04) + PowerDistStretch(a=1000)  #makes bkg noise worse
 
     i = interval.get_limits(ir_data[0])
     r = stretch(normalize(ir_data[0], *i))
@@ -95,7 +95,7 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     alpha_stretch = AsinhStretch(a=0.5)
     alpha = alpha_stretch(alpha)
     # Overlay masked radio im in mJy 
-    gaus_bl = gaussian_filter(mask.astype(float), sigma=150)*0.9
+    gaus_bl = gaussian_filter(mask.astype(float), sigma=3)*0.9
     ax.imshow(radio_interp * 1e3, cmap='magma', origin='lower', #gist_heat
             alpha = alpha)
             #alpha=gaussian_filter(mask.astype(float), sigma=150)*1) # Blend from 0.9 alpha
@@ -105,7 +105,7 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     ax.tick_params(axis='y', which='both', labelcolor='black')
 
     # Plot radio contours 'YlOrd'
-    contour_lvls = np.logspace(np.log10(3), np.log10(22), num=int((np.log10(22) - np.log10(3)) / 0.15 +1)) * rms_c
+    contour_lvls = np.logspace(np.log10(3), np.log10(60), num=int((np.log10(60) - np.log10(3)) / 0.25 +1)) * rms_c
     print(contour_lvls/rms_c)
     ax.contour(contour_data, levels=contour_lvls, cmap='YlOrRd', linewidths=0.5, alpha=0.4,transform=ax.get_transform(contour_wcs))
     
@@ -118,12 +118,12 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
 
     # Add synthesized beam
     wcsaxes.add_beam(ax, header=contour_header,alpha=0.9,pad=0.65,frame=False)
-    wcsaxes.add_beam(ax,header=radio_header,color='orange',alpha=0.9,pad=0.65) 
+    wcsaxes.add_beam(ax,header=radio_header,color='orange',alpha=0.9,pad=1.1) 
     # Radio image color bar
     cbar = fig.colorbar(ax.images[-1], ax=ax, shrink=1, pad=0.01,aspect=40) #pad=0.04
     cbar.set_label('Brightness (mJy/beam)')
     # Scale
-    kpc_per_arcsec = 1.54 * u.kpc / u.arcsec
+    kpc_per_arcsec = 2.721 * u.kpc / u.arcsec
 
     # Scale bar length in kpc
     scale_length_kpc = 100 * u.kpc

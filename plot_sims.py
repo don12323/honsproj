@@ -86,7 +86,7 @@ def plot_first_four_sources(fits_files, output_file):
     plt.close(fig)
 
 def plot_remaining_sources(fits_files, output_file):
-    fig = plt.figure(figsize=(15, 0.8*3/4*15 * np.sqrt(2)))  # A4 size in inches (landscape)
+    fig = plt.figure(figsize=(15, 0.8*3/4*15 * np.sqrt(2)))  # Made it match paper size
     labels = ['(e)', '(f)', '(g)']
     for i, fits_file in enumerate(fits_files[4:]):
         with fits.open(fits_file) as hdul:
