@@ -6,6 +6,7 @@ from astropy.io import fits
 from astropy.coordinates import SkyCoord
 from astropy.wcs import WCS
 import astropy.units as u
+from astropy.visualization import wcsaxes
 
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
@@ -95,7 +96,7 @@ def create_spectral_index_map(fits_files, output_file, cont_fits, rms, host_coor
     print(f"Min chi2red: {np.nanmin(chi2red_map)}, Max chi2red: {np.nanmax(chi2red_map)}")
     print(f"mean chi2r: {np.nanmean(chi2red_map)}, mean SEM: {np.nanmean(spectral_index_error_map)}")
     # Add mask
-    lower = spectral_index_map > -3
+    lower = spectral_index_map > -4
     upper = spectral_index_map < -0.1
     with fits.open(cont_fits) as hdu:
         contour_data = hdu[0].data
@@ -126,39 +127,45 @@ def create_spectral_index_map(fits_files, output_file, cont_fits, rms, host_coor
     return spectral_index_map, spectral_index_error_map, chi2red_map, header
 
 def plot_maps(spectral_index_map, spectral_index_error_map, chi2red_map, header, cont_fits, host_coords, rms):
-    fig, axes = plt.subplots(1, 3, figsize=(24, 8), subplot_kw={'projection': WCS(header,naxis=2)}) #add naxis=2?
+    fig, axes = plt.subplots(1, 3, figsize=(15, 5), subplot_kw={'projection': WCS(header,naxis=2)}) #add naxis=2?
     ax1, ax2, ax3 = axes
     
     with fits.open(cont_fits) as hdu:
+        contour_header = hdu[0].header
         contour_data = hdu[0].data
     #rms = 3.2323823378589636e-05                 #J01445 4.929831199803229e-05
-    levels = [3*rms, 6*rms, 15*rms, 35*rms, 46*rms]
+    levels = np.logspace(np.log10(3), np.log10(60), num=int((np.log10(60) - np.log10(3)) / 0.25 +1)) * rms
 
     im1 = ax1.imshow(spectral_index_map, cmap='inferno') #gist_rainbow_r
-    ax1.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax1.get_transform(WCS(header, naxis=2)),alpha = 0.5)
+    ax1.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax1.get_transform(WCS(header, naxis=2)),alpha = 0.9)
     ax1.set_title('Spectral Index Map')
-    cbar1 = fig.colorbar(im1, ax=ax1, shrink=0.75)
-    cbar1.set_label(r'$\alpha_{6GHz}$')
-
+    cbar1 = fig.colorbar(im1, ax=ax1, shrink=0.89,pad=0.01,aspect=40)
+    #cbar1.set_label(r'$\alpha_{4.5GHz}^{11.5GHz}$')
+    wcsaxes.add_beam(ax1, header=contour_header,alpha=0.9,pad=0.65,frame=True, facecolor=None, edgecolor=None)
+    
     im2 = ax2.imshow(spectral_index_error_map, origin = 'lower', cmap='inferno', norm=LogNorm())
-    ax2.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax2.get_transform(WCS(header,naxis=2)),alpha = 0.5)
+    ax2.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax2.get_transform(WCS(header,naxis=2)),alpha = 0.9)
     ax2.set_title('Spectral Index error Map')
-    cbar2 = plt.colorbar(im2, ax=ax2, shrink=0.75)
-    cbar2.set_label('Error')
+    ax2.coords[1].set_ticklabel_visible(False)
+    cbar2 = plt.colorbar(im2, ax=ax2, shrink=0.89,pad=0.01,aspect=40)
+    #cbar2.set_label('Error')
+    wcsaxes.add_beam(ax2, header=contour_header,alpha=0.9,pad=0.65,frame=True, facecolor=None, edgecolor=None)
     
     im3 = ax3.imshow(chi2red_map, origin = 'lower', cmap = 'viridis', norm=LogNorm())
-    ax3.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax3.get_transform(WCS(header,naxis=2)), alpha = 0.5)
+    ax3.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax3.get_transform(WCS(header,naxis=2)), alpha = 0.9)
     ax3.set_title('Reduced Chi-square Map')
-    cbar3 = plt.colorbar(im3, ax=ax3, shrink=0.75)
-    cbar3.set_label('Chi_square')
-
+    ax3.coords[1].set_ticklabel_visible(False)
+    cbar3 = plt.colorbar(im3, ax=ax3, shrink=0.89, pad=0.01,aspect=40)
+    #cbar3.set_label('Chi_square')
+    wcsaxes.add_beam(ax3, header=contour_header,alpha=0.9,pad=0.65,frame=True, facecolor=None, edgecolor=None)
+    
     for ax in axes:
         ax.set_xlabel('RA (J2000)')
         ax.set_ylabel('DEC (J2000)')
         #plot host galaxy
         if host_coords is not None:
             host_pixel_coords = WCS(header).world_to_pixel(host_coords)
-            ax.plot(host_pixel_coords[0], host_pixel_coords[1], 'x', color='#08F7FE', markersize=10)
+            ax.plot(host_pixel_coords[0], host_pixel_coords[1], 'x', color='k', markersize=5) ##08F7FE
 
 
 
