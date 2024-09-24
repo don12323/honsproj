@@ -55,7 +55,7 @@ def process_pixel(args):
         _, alpha, _, err_alpha, chi2red = WLLS(flux_array, frequencies, flux_errors)
         return i, j, alpha, err_alpha, chi2red
 
-def create_spectral_index_map(fits_files, output_file, cont_fits, rms, host_coords):
+def create_spectral_index_map(fits_files, output_file, cont_fits, rms, host_coords, maxlvl,dex):
     # Read FITS files and gather data
     data_list = []
     frequencies = []
@@ -96,7 +96,7 @@ def create_spectral_index_map(fits_files, output_file, cont_fits, rms, host_coor
     print(f"Min chi2red: {np.nanmin(chi2red_map)}, Max chi2red: {np.nanmax(chi2red_map)}")
     print(f"mean chi2r: {np.nanmean(chi2red_map)}, mean SEM: {np.nanmean(spectral_index_error_map)}")
     # Add mask
-    lower = spectral_index_map > -4
+    lower = spectral_index_map > -5
     upper = spectral_index_map < -0.1
     with fits.open(cont_fits) as hdu:
         contour_data = hdu[0].data
@@ -105,15 +105,20 @@ def create_spectral_index_map(fits_files, output_file, cont_fits, rms, host_coor
     spectral_index_map = np.where(mask, spectral_index_map, np.nan)
     spectral_index_error_map = np.where(mask, spectral_index_error_map, np.nan)
     chi2red_map = np.where(mask, chi2red_map, np.nan)
-    # Write spectral index map to a new FITS file
-    #hdu = fits.PrimaryHDU(spectral_index_map, header=header)
-    #hdul = fits.HDUList([hdu])
-    #hdul.writeto(output_file, overwrite=True)
+    
     header['RMS'] = rms
+    header['MAX_LVL']=maxlvl
+    header['DEX']=dex
     # write host coordinates if provided
+
+    coord_table_hdu = None
     if host_coords is not None:
-        header['HGRA'] = host_coords.ra.deg
-        header['HGDEC'] = host_coords.dec.deg
+        ra_vals = [c.ra.deg for c in host_coords]
+        dec_vals = [c.dec.deg for c in host_coords]
+        col1 = fits.Column(name='RA', format='E', array=ra_vals)
+        col2 = fits.Column(name='DEC', format='E', array=dec_vals)
+        coord_table_hdu = fits.BinTableHDU.from_columns([col1, col2], name='HOST_COORDS')
+
     maps_hdu = fits.PrimaryHDU(header=header)
 
     hdu_sim = fits.ImageHDU(spectral_index_map,header=header, name='INDEX_MAP')
@@ -121,12 +126,14 @@ def create_spectral_index_map(fits_files, output_file, cont_fits, rms, host_coor
     hdu_chi2redm = fits.ImageHDU(chi2red_map,header=header, name='CHI2RED_MAP')
     hdu_im = fits.ImageHDU(contour_data, header=header, name='IMAGE')
 
-    hdul = fits.HDUList([maps_hdu, hdu_sim, hdu_errm, hdu_chi2redm, hdu_im])
-    hdul.writeto(output_file, overwrite=True)
+    hdul = [maps_hdu, hdu_sim, hdu_errm, hdu_chi2redm, hdu_im]
+    if coord_table_hdu is not None:
+        hdul.append(coord_table_hdu)
+    fits.HDUList(hdul).writeto(output_file, overwrite=True)
 
     return spectral_index_map, spectral_index_error_map, chi2red_map, header
 
-def plot_maps(spectral_index_map, spectral_index_error_map, chi2red_map, header, cont_fits, host_coords, rms):
+def plot_maps(spectral_index_map, spectral_index_error_map, chi2red_map, header, cont_fits, host_coords, rms, maxlvl, dex):
     fig, axes = plt.subplots(1, 3, figsize=(15, 5), subplot_kw={'projection': WCS(header,naxis=2)}) #add naxis=2?
     ax1, ax2, ax3 = axes
     
@@ -134,7 +141,7 @@ def plot_maps(spectral_index_map, spectral_index_error_map, chi2red_map, header,
         contour_header = hdu[0].header
         contour_data = hdu[0].data
     #rms = 3.2323823378589636e-05                 #J01445 4.929831199803229e-05
-    levels = np.logspace(np.log10(3), np.log10(60), num=int((np.log10(60) - np.log10(3)) / 0.25 +1)) * rms
+    levels = np.logspace(np.log10(3), np.log10(maxlvl), num=int((np.log10(maxlvl) - np.log10(3)) / dex +1)) * rms
 
     im1 = ax1.imshow(spectral_index_map, cmap='inferno') #gist_rainbow_r
     ax1.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax1.get_transform(WCS(header, naxis=2)),alpha = 0.9)
@@ -164,10 +171,10 @@ def plot_maps(spectral_index_map, spectral_index_error_map, chi2red_map, header,
         ax.set_ylabel('DEC (J2000)')
         #plot host galaxy
         if host_coords is not None:
-            host_pixel_coords = WCS(header).world_to_pixel(host_coords)
-            ax.plot(host_pixel_coords[0], host_pixel_coords[1], 'x', color='k', markersize=5) ##08F7FE
-
-
+            for i, c in enumerate(host_coords, start=1):
+                #ax.plot(c.ra.deg, c.dec.deg, marker='o', color='red',markerfacecolor='none',transform=ax.get_transform('fk5'), markersize=8)
+                ax.plot(c.ra.deg, c.dec.deg, marker='o', color='grey',markeredgecolor='k',transform=ax.get_transform('fk5'), markersize=6)
+                ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='blue', transform=ax.get_transform('fk5'), fontsize=8, ha='left', va='top')
 
     plt.tight_layout()
     plt.savefig('SIM.png')
@@ -178,20 +185,27 @@ if __name__ == "__main__":
     parser.add_argument('--infits', type=str, required=True, help="Text file containing list of FITS files")
     parser.add_argument('--outfits', type=str, required=True, help="Output FITS file for spectral index map")
     parser.add_argument('--contour', type=str, required=True, help="FITS file for contour overlay")
-    parser.add_argument('--rms', type=float, required=True, help="background RMS of contour image")
-    parser.add_argument('--host_ra', type=float, help="RA of the host galaxy")
-    parser.add_argument('--host_dec', type=float, help="DEC of the host galaxy")
-
+    parser.add_argument('--rms', type=float, required=True, help="Background RMS of contour image")
+    parser.add_argument('--lvl_dex', type=str, help='Max contour level and dex value')
+    parser.add_argument('--coords', type=str, required=True, help='Path to the text file containing host galaxy coordinates')
     args = parser.parse_args()
 
     # Read in FITS files
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
     
-    host_coords = None
-    if args.host_ra is not None and args.host_dec is not None:
-        host_coords = SkyCoord(ra=args.host_ra * u.deg, dec=args.host_dec * u.deg, frame='fk5')
 
-    spectral_index_map, spectral_error_map, chi2red_map, header = create_spectral_index_map(fits_files, args.outfits, args.contour, args.rms, host_coords)
-    plot_maps(spectral_index_map, spectral_error_map, chi2red_map, header, args.contour, host_coords, args.rms)
+    host_coords = None
+    with open(args.coords, 'r') as file:
+        coords = [line.strip().split(',') for line in file.readlines()]
+        ra_vals = [float(ra) for ra, dec in coords]
+        dec_vals = [float(dec) for ra, dec in coords]
+        host_coords = SkyCoord(ra=ra_vals, dec=dec_vals, unit='deg', frame='fk5')
+    
+    maxlvl, dex = map(float, args.lvl_dex.split(','))
+
+    spectral_index_map, spectral_error_map, chi2red_map, header = create_spectral_index_map(
+            fits_files, args.outfits, args.contour, args.rms, host_coords, maxlvl, dex)
+    plot_maps(spectral_index_map, spectral_error_map, chi2red_map, header, args.contour, 
+            host_coords, args.rms, maxlvl, dex)
 
