@@ -96,8 +96,8 @@ def create_spectral_index_map(fits_files, output_file, cont_fits, rms, host_coor
     print(f"Min chi2red: {np.nanmin(chi2red_map)}, Max chi2red: {np.nanmax(chi2red_map)}")
     print(f"mean chi2r: {np.nanmean(chi2red_map)}, mean SEM: {np.nanmean(spectral_index_error_map)}")
     # Add mask
-    lower = spectral_index_map > -5
-    upper = spectral_index_map < -0.1
+    lower = spectral_index_map > -3.5
+    upper = spectral_index_map < -0.5
     with fits.open(cont_fits) as hdu:
         contour_data = hdu[0].data
     sigma3 = contour_data >= 3*rms
@@ -143,14 +143,14 @@ def plot_maps(spectral_index_map, spectral_index_error_map, chi2red_map, header,
     #rms = 3.2323823378589636e-05                 #J01445 4.929831199803229e-05
     levels = np.logspace(np.log10(3), np.log10(maxlvl), num=int((np.log10(maxlvl) - np.log10(3)) / dex +1)) * rms
 
-    im1 = ax1.imshow(spectral_index_map, cmap='inferno') #gist_rainbow_r
+    im1 = ax1.imshow(spectral_index_map, cmap='turbo') #gist_rainbow_r
     ax1.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax1.get_transform(WCS(header, naxis=2)),alpha = 0.9)
     ax1.set_title('Spectral Index Map')
     cbar1 = fig.colorbar(im1, ax=ax1, shrink=0.89,pad=0.01,aspect=40)
     #cbar1.set_label(r'$\alpha_{4.5GHz}^{11.5GHz}$')
     wcsaxes.add_beam(ax1, header=contour_header,alpha=0.9,pad=0.65,frame=True, facecolor=None, edgecolor=None)
     
-    im2 = ax2.imshow(spectral_index_error_map, origin = 'lower', cmap='inferno', norm=LogNorm())
+    im2 = ax2.imshow(spectral_index_error_map, origin = 'lower', cmap='turbo', norm=LogNorm())
     ax2.contour(contour_data, levels=levels, colors='black', linewidths=1.0, transform=ax2.get_transform(WCS(header,naxis=2)),alpha = 0.9)
     ax2.set_title('Spectral Index error Map')
     ax2.coords[1].set_ticklabel_visible(False)
@@ -186,7 +186,7 @@ if __name__ == "__main__":
     parser.add_argument('--outfits', type=str, required=True, help="Output FITS file for spectral index map")
     parser.add_argument('--contour', type=str, required=True, help="FITS file for contour overlay")
     parser.add_argument('--rms', type=float, required=True, help="Background RMS of contour image")
-    parser.add_argument('--lvl_dex', type=str, help='Max contour level and dex value')
+    parser.add_argument('--lvl_dex', type=str, required=True, help='Max contour level and dex value')
     parser.add_argument('--coords', type=str, required=True, help='Path to the text file containing host galaxy coordinates')
     args = parser.parse_args()
 

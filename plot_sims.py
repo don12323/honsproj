@@ -97,8 +97,8 @@ def plot_first_four_sources(fits_files, output_file):
     plt.close(fig)
 
 def plot_remaining_sources(fits_files, output_file):
-    fig = plt.figure(figsize=(15, 0.8*3/4*15 * np.sqrt(2)))  # Made it match paper size
-    labels = ['(e)', '(f)', '(g)']
+    fig = plt.figure(figsize=(15, 0.8*15 * np.sqrt(2)))  # Made it match paper size #fig = plt.figure(figsize=(15, 0.8*3/4*15 * np.sqrt(2)))  # Made it match paper size
+    labels = ['(e)', '(f)', '(g)','(h)']
     for i, fits_file in enumerate(fits_files[4:]):
         with fits.open(fits_file) as hdul:
             header = hdul['INDEX_MAP'].header
@@ -128,7 +128,7 @@ def plot_remaining_sources(fits_files, output_file):
         contour_levels = np.logspace(np.log10(3), np.log10(maxlvl), num=int((np.log10(maxlvl) - np.log10(3)) / dex +1)) * rms
 
         # spectral index map
-        ax1 = fig.add_subplot(3, 3, i * 3 + 1, projection=wcs)
+        ax1 = fig.add_subplot(4, 3, i * 3 + 1, projection=wcs)
         im1 = ax1.imshow(spectral_index_map, origin='lower', cmap='turbo', interpolation='none', vmin=-2.5, vmax=-0.5) #gist rainbow
         ax1.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax1.get_transform(wcs))
         ax1.tick_params(direction='in')
@@ -140,7 +140,7 @@ def plot_remaining_sources(fits_files, output_file):
         # Label
         ax1.text(0.02, 0.95, labels[i], transform=ax1.transAxes, fontsize=14, fontweight='bold', va='top', ha='left')
         # spectral index error map
-        ax2 = fig.add_subplot(3, 3, i * 3 + 2, projection=wcs)
+        ax2 = fig.add_subplot(4, 3, i * 3 + 2, projection=wcs)
         im2 = ax2.imshow(spectral_index_error_map, origin='lower', cmap='turbo', interpolation='none', norm=LogNorm())
         ax2.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax2.get_transform(wcs))
         ax2.tick_params(direction='in')
@@ -152,7 +152,7 @@ def plot_remaining_sources(fits_files, output_file):
         cbar2 = fig.colorbar(im2, ax=ax2, orientation='vertical', shrink=0.99, pad=0.01,aspect=30)
         
         # chi2red map
-        ax3 = fig.add_subplot(3, 3, i * 3 + 3, projection=wcs)
+        ax3 = fig.add_subplot(4, 3, i * 3 + 3, projection=wcs)
         im3 = ax3.imshow(chi2red_map, origin='lower', cmap='inferno', interpolation='none', norm=LogNorm())
         ax3.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax3.get_transform(wcs))
         ax3.tick_params(direction='in')
