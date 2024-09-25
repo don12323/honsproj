@@ -5,6 +5,7 @@ from matplotlib.colors import LogNorm
 from astropy.io import fits
 from astropy.wcs import WCS
 from astropy.coordinates import SkyCoord
+from astropy.visualization import wcsaxes
 import astropy.units as u
 import glob
 
@@ -25,25 +26,33 @@ def plot_first_four_sources(fits_files, output_file):
             chi2red_map = hdul['CHI2RED_MAP'].data
             image = hdul['IMAGE'].data
             rms = hdul[0].header['RMS']
-
+            maxlvl = hdul[0].header['MAX_LVL']
+            dex = hdul[0].header['DEX']
+            
             host_coords = None
-            if 'HGRA' in header and 'HGDEC' in header:
-                hgra = header['HGRA']
-                hgdec = header['HGDEC']
-                host_coords = SkyCoord(ra=hgra * u.deg, dec=hgdec * u.deg, frame='fk5')
+            if 'HOST_COORDS' in hdul:
+                ra = hdul['HOST_COORDS'].data['RA']
+                dec = hdul['HOST_COORDS'].data['DEC']
+                host_coords = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='fk5')
 
-        contour_levels = [3*rms, 6*rms, 10*rms, 15*rms, 25*rms]
+            #host_coords = None
+            #if 'HGRA' in header and 'HGDEC' in header:
+            #    hgra = header['HGRA']
+            #    hgdec = header['HGDEC']
+            #    host_coords = SkyCoord(ra=hgra * u.deg, dec=hgdec * u.deg, frame='fk5')
 
+        #contour_levels = [3*rms, 6*rms, 10*rms, 15*rms, 25*rms]
+        contour_levels = np.logspace(np.log10(3), np.log10(maxlvl), num=int((np.log10(maxlvl) - np.log10(3)) / dex +1)) * rms
         # Plot spectral index map
         ax1 = fig.add_subplot(4, 3, i * 3 + 1, projection=wcs)
-        im1 = ax1.imshow(spectral_index_map, origin='lower', cmap='inferno', interpolation='none', vmin=-4, vmax=-0.5) #gist_rainbow_r
+        im1 = ax1.imshow(spectral_index_map, origin='lower', cmap='turbo', interpolation='none', vmin=-4, vmax=-0.5) #gist_rainbow_r
         ax1.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax1.get_transform(wcs))
         ax1.tick_params(direction='in') #width=2
         if i == 0:
             ax1.set_title('Spectral Index')
         ax1.coords[0].set_axislabel('R.A. (J2000)')
         ax1.coords[1].set_axislabel('Dec. (J2000)')
-        cbar1 = fig.colorbar(im1, ax=ax1, orientation='vertical', pad=0.04, shrink=0.94)
+        cbar1 = fig.colorbar(im1, ax=ax1, orientation='vertical', shrink=0.99, pad=0.01,aspect=30)
         # Label
         ax1.text(0.02, 0.95, labels[i], transform=ax1.transAxes, fontsize=14, fontweight='bold',va='top', ha='left')
         #TODO axis width doesnt work
@@ -52,7 +61,7 @@ def plot_first_four_sources(fits_files, output_file):
 
         # Spectral index error map
         ax2 = fig.add_subplot(4, 3, i * 3 + 2, projection=wcs)
-        im2 = ax2.imshow(spectral_index_error_map, origin='lower', cmap='inferno', interpolation='none', norm=LogNorm())
+        im2 = ax2.imshow(spectral_index_error_map, origin='lower', cmap='turbo', interpolation='none', norm=LogNorm())
         ax2.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax2.get_transform(wcs))
         ax2.tick_params(direction='in')
         if i == 0:
@@ -60,7 +69,7 @@ def plot_first_four_sources(fits_files, output_file):
         ax2.coords[0].set_axislabel('R.A. (J2000)')
         ax2.coords[1].set_ticklabel_visible(False)
         ax2.coords[1].set_axislabel('')
-        cbar2 = fig.colorbar(im2, ax=ax2, orientation='vertical', pad=0.04, shrink=0.94)
+        cbar2 = fig.colorbar(im2, ax=ax2, orientation='vertical', shrink=0.99, pad=0.01,aspect=30)
         
         # Chi2red map
         ax3 = fig.add_subplot(4, 3, i * 3 + 3, projection=wcs)
@@ -72,14 +81,16 @@ def plot_first_four_sources(fits_files, output_file):
         ax3.coords[0].set_axislabel('R.A. (J2000)')
         ax3.coords[1].set_ticklabel_visible(False)
         ax3.coords[1].set_axislabel('')
-        cbar3 = fig.colorbar(im3, ax=ax3, orientation='vertical', pad=0.04, shrink=0.94)
+        cbar3 = fig.colorbar(im3, ax=ax3, orientation='vertical', shrink=0.99, pad=0.01,aspect=30)
         
         # Plot hg coords
         axes = [ax1, ax2, ax3]
         for ax in axes:
+            wcsaxes.add_beam(ax, header=header,alpha=0.9,pad=0.65,frame=True, facecolor=None, edgecolor=None)
             if host_coords is not None:
-                host_pixel_coords = WCS(header).world_to_pixel(host_coords)
-                ax.plot(host_pixel_coords[0], host_pixel_coords[1], 'x', color='black', markersize=10)
+                for i,c in enumerate(host_coords, start=1):
+                    ax.plot(c.ra.deg, c.dec.deg,marker='x', color='black', transform=ax.get_transform('fk5'), markersize=10)
+                    ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='black', transform=ax.get_transform('fk5'), fontsize=6, ha='left', va='top')
         
     plt.tight_layout()
     plt.savefig(output_file)
@@ -98,28 +109,39 @@ def plot_remaining_sources(fits_files, output_file):
             image = hdul['IMAGE'].data
             rms = hdul[0].header['RMS']
         
+            maxlvl = hdul[0].header['MAX_LVL']
+            dex = hdul[0].header['DEX']
+            
             host_coords = None
-            if 'HGRA' in header and 'HGDEC' in header:
-                hgra = header['HGRA']
-                hgdec = header['HGDEC']
-                host_coords = SkyCoord(ra=hgra * u.deg, dec=hgdec * u.deg, frame='fk5')
-        contour_levels = [3*rms, 6*rms, 10*rms, 15*rms, 25*rms]
+            if 'HOST_COORDS' in hdul:
+                ra = hdul['HOST_COORDS'].data['RA']
+                dec = hdul['HOST_COORDS'].data['DEC']
+                host_coords = SkyCoord(ra=ra * u.deg, dec=dec * u.deg, frame='fk5')
+
+            #host_coords = None
+            #if 'HGRA' in header and 'HGDEC' in header:
+            #    hgra = header['HGRA']
+            #    hgdec = header['HGDEC']
+            #    host_coords = SkyCoord(ra=hgra * u.deg, dec=hgdec * u.deg, frame='fk5')
+
+        #contour_levels = [3*rms, 6*rms, 10*rms, 15*rms, 25*rms]
+        contour_levels = np.logspace(np.log10(3), np.log10(maxlvl), num=int((np.log10(maxlvl) - np.log10(3)) / dex +1)) * rms
 
         # spectral index map
         ax1 = fig.add_subplot(3, 3, i * 3 + 1, projection=wcs)
-        im1 = ax1.imshow(spectral_index_map, origin='lower', cmap='inferno', interpolation='none', vmin=-2.5, vmax=-0.5) #gist rainbow
+        im1 = ax1.imshow(spectral_index_map, origin='lower', cmap='turbo', interpolation='none', vmin=-2.5, vmax=-0.5) #gist rainbow
         ax1.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax1.get_transform(wcs))
         ax1.tick_params(direction='in')
         if i == 0:
             ax1.set_title('Spectral Index')
         ax1.coords[0].set_axislabel('R.A. (J2000)')
         ax1.coords[1].set_axislabel('Dec. (J2000)')
-        cbar1 = fig.colorbar(im1, ax=ax1, orientation='vertical', pad=0.04, shrink=0.91)
+        cbar1 = fig.colorbar(im1, ax=ax1, orientation='vertical', shrink=0.99, pad=0.01,aspect=30)
         # Label
         ax1.text(0.02, 0.95, labels[i], transform=ax1.transAxes, fontsize=14, fontweight='bold', va='top', ha='left')
         # spectral index error map
         ax2 = fig.add_subplot(3, 3, i * 3 + 2, projection=wcs)
-        im2 = ax2.imshow(spectral_index_error_map, origin='lower', cmap='inferno', interpolation='none', norm=LogNorm())
+        im2 = ax2.imshow(spectral_index_error_map, origin='lower', cmap='turbo', interpolation='none', norm=LogNorm())
         ax2.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax2.get_transform(wcs))
         ax2.tick_params(direction='in')
         if i == 0:
@@ -127,11 +149,11 @@ def plot_remaining_sources(fits_files, output_file):
         ax2.coords[0].set_axislabel('R.A. (J2000)')
         ax2.coords[1].set_ticklabel_visible(False)
         ax2.coords[1].set_axislabel('')
-        cbar2 = fig.colorbar(im2, ax=ax2, orientation='vertical', pad=0.04, shrink=0.91)
+        cbar2 = fig.colorbar(im2, ax=ax2, orientation='vertical', shrink=0.99, pad=0.01,aspect=30)
         
         # chi2red map
         ax3 = fig.add_subplot(3, 3, i * 3 + 3, projection=wcs)
-        im3 = ax3.imshow(chi2red_map, origin='lower', cmap='viridis', interpolation='none', norm=LogNorm())
+        im3 = ax3.imshow(chi2red_map, origin='lower', cmap='inferno', interpolation='none', norm=LogNorm())
         ax3.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax3.get_transform(wcs))
         ax3.tick_params(direction='in')
         if i == 0:
@@ -139,14 +161,17 @@ def plot_remaining_sources(fits_files, output_file):
         ax3.coords[0].set_axislabel('R.A. (J2000)')
         ax3.coords[1].set_ticklabel_visible(False)
         ax3.coords[1].set_axislabel('')
-        cbar3 = fig.colorbar(im3, ax=ax3, orientation='vertical', pad=0.05, shrink=0.91)
-
+        cbar3 = fig.colorbar(im3, ax=ax3, orientation='vertical', shrink=0.99, pad=0.01,aspect=30)
+        
         # Plot hg coords
         axes = [ax1, ax2, ax3]
         for ax in axes:
+            wcsaxes.add_beam(ax, header=header,alpha=0.9,pad=0.65,frame=True, facecolor=None, edgecolor=None)
             if host_coords is not None:
-                host_pixel_coords = WCS(header).world_to_pixel(host_coords)
-                ax.plot(host_pixel_coords[0], host_pixel_coords[1], 'x', color='black', markersize=10)
+                for i,c in enumerate(host_coords, start=1):
+                    ax.plot(c.ra.deg, c.dec.deg,marker='x', color='black', transform=ax.get_transform('fk5'), markersize=10)
+                    ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='black', transform=ax.get_transform('fk5'), fontsize=6, ha='left', va='top')
+    
     plt.tight_layout()
     plt.savefig(output_file)
     plt.close(fig)
