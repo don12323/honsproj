@@ -9,7 +9,7 @@ import os
 import datetime
 from scipy.optimize import curve_fit
 
-from sf.synchrofit import spectral_fitter, spectral_model_, spectral_ages
+from sf.synchrofit import spectral_fitter, spectral_model_, spectral_ages #https://github.com/synchrofit/synchrofit
 plt.style.use('seaborn-v0_8-bright')
 plt.rcParams["font.family"] = "serif"
 
@@ -57,12 +57,15 @@ def plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, p
     dv_b = (10**params[1])*(np.log(10)*params[2]) / 1e9 
     inj_index = (params[3] - 1.0) / 2.0
     dinj_index = params[4] / 2.0
-    t_on = ages[1]
-    dt = params[6] * ages[0]
-    t_off = ages[2]
+    Rrem = params[5]
+    dRrem = params[6]
+    if ages is not None:
+        t_on = ages[1]
+        dt = params[6] * ages[0]
+        t_off = ages[2]
     
     
-    fig, ax =plt.subplots(figsize=(7, 6))
+    fig, ax =plt.subplots(figsize=(6, 5)) #was 7,6
 
 
     unq_obsname = np.unique(obsname)
@@ -72,7 +75,7 @@ def plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, p
    # Plot model data
     model_suffix = ""
     if fit_type in ['CI', 'TCI']:
-        if t_off == 0:
+        if Rrem == 0:
             model_suffix = '-on'
         else:
             model_suffix = '-off'
@@ -94,7 +97,7 @@ def plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, p
 		#unpack WLLS params
         amp, alpha, damp ,dalpha, chi2red = WLLS_params
         fitted_phot = [powerlaw(amp,f,alpha) for f in plotting_frequency]
-        label_str = fr'$\alpha_{{4.5GHz}}^{{11.5GHz}} = {alpha:.1f} \pm {dalpha:.1f}$'
+        label_str = fr'$\alpha_{{4.5GHz}}^{{11.5GHz}} = {-alpha:.1f} \pm {dalpha:.1f}$'
         ax.plot(plotting_frequency,fitted_phot, '--', label=label_str)
 
     for spine in ax.spines.values():
@@ -102,15 +105,20 @@ def plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, p
  #   ax.grid(True)
     str2 = r'$\alpha_{inj} = $'
     str1 = r'$\nu_b$ = '
-    if fit_type in ['CI', 'TCI'] and t_off != 0: 
-        legend_text = (str1 + f'{v_b:.2f} ± {dv_b:.2f} GHz\n' +
+    str3 = r'$R_{rem}$='
+    if fit_type in ['CI', 'TCI'] and ages is not None and Rrem != 0: 
+        legend_text = (str1 + f'{v_b:.3f} ± {dv_b:.3f} GHz\n' +
                        str2 + f'{inj_index:.3f} ± {dinj_index:.3f}\n' +
                        r'$t_{on} = $' + f'{t_on:.2f} ± {dt:.2f} Myr\n' +
                        r'$t_{off} = $' + f'{t_off:.2f} ± {dt:.2f} Myr')
-    else:
-        legend_text = (str1 + f'{v_b:.2f} ± {dv_b:.2f} GHz\n' +
+    elif fit_type in ['CI', 'TCI'] and ages is not None:
+        legend_text = (str1 + f'{v_b:.3f} ± {dv_b:.3f} GHz\n' +
                        str2 + f'{inj_index:.3f} ± {dinj_index:.3f}\n' +
                        r'$\tau = $' + f'{t_on:.2f} Myr')	
+    else: 
+        legend_text = (str1 + f'{v_b:.3f} ± {dv_b:.3f} GHz\n' +
+                str2 + f'{inj_index:.3f} ± {dinj_index:.3f}\n' +
+                str3 + f'{Rrem:.3f} ± {dRrem:.3f}')
 
     first_legend = ax.legend(handles=[plt.Line2D([], [], color='none', label=legend_text)], loc='lower left', handlelength=0, fontsize=11, frameon=False)
     ax.add_artist(first_legend)
@@ -137,8 +145,9 @@ def log_results(file_name, B_eq, z, remnant_range, fit_type, params, ages):
         # Log the input parameters
         log_file.write(f"Input Parameters:\n")
         log_file.write(f"Data File: {file_name}\n")
-        log_file.write(f"Magnetic Field (B_eq): {B_eq*1e9} nT\n")
-        log_file.write(f"Redshift: {z}\n")
+        if B_eq is not None and z is not None:
+            log_file.write(f"Magnetic Field (B_eq): {B_eq*1e9} nT\n")
+            log_file.write(f"Redshift: {z}\n")
         log_file.write(f"Remnant Range: {remnant_range}\n")
         log_file.write(f"Fit Type: {fit_type}\n\n")
         
@@ -153,26 +162,16 @@ def log_results(file_name, B_eq, z, remnant_range, fit_type, params, ages):
         log_file.write(f"dremnant_predict : {params[6]:.6f}\n")
         
         # Log the spectral ages
-        log_file.write("Spectral Ages:\n")
-        log_file.write(f"tau   : {ages[0]:.6f} Myr\n")
-        log_file.write(f"t_on  : {ages[1]:.6f} Myr\n")
-        log_file.write(f"t_off : {ages[2]:.6f} Myr\n")
+        if ages is not None:
+            log_file.write("Spectral Ages:\n")
+            log_file.write(f"tau   : {ages[0]:.6f} Myr\n")
+            log_file.write(f"t_on  : {ages[1]:.6f} Myr\n")
+            log_file.write(f"t_off : {ages[2]:.6f} Myr\n")
 
 def main(file_name, fit_type, B_eq, z, remnant_range, extra_data):
     # Read the data
     obsname, frequency, photometry, uncertainty = read_dat_file(file_name)
     obsname
-    #calculate Beq
-    #p = 0.5
-    #alpha_thin = -1.66
-   # nu_peak =7.510961461177
-   # S_peak=0.0287236042540605 
-    #theta_src_min = 46                 # J01445 21.9767
-    #theta_src_max = 55                 # J01445 30.476
-    #z = 0.097000                               # J01445 0.366972
-   # theta_src_min = 53
-   # theta_src_max = 88.5
-   # z = 0.097
 
     #X_p = ((10**(p+alpha_thin))-(nu_peak**(p+alpha_thin)))/(p+alpha_thin)
     #redshift_part = ((1+1)/1)*((1+z)**(3+alpha_thin))
@@ -181,8 +180,8 @@ def main(file_name, fit_type, B_eq, z, remnant_range, extra_data):
     #B_eq = 5.69e-5 * (redshift_part * source_size_part * freq_flux_part * X_p)**(2/7) 
 
     
-
-    print("Beq is :",B_eq,"nT")
+    if B_eq is not None:
+        print("Beq is :",B_eq,"nT")
     
     params, _, _, _, _, _= spectral_fitter(frequency, photometry, uncertainty, fit_type, remnant_range=remnant_range,b_field=B_eq,redshift=z)
     
@@ -190,6 +189,7 @@ def main(file_name, fit_type, B_eq, z, remnant_range, extra_data):
     model_data, err_model_data, model_data_min, model_data_max = spectral_model_(params, frequency)
 
     # Add extra data points
+    WLLS_params = None
     if extra_data is not None:
         extra_obsname, extra_frequency, extra_photometry, extra_uncertainty = read_dat_file(extra_data)
         obsname = np.append(obsname, extra_obsname)
@@ -217,7 +217,9 @@ def main(file_name, fit_type, B_eq, z, remnant_range, extra_data):
     #ages
 
     params_ages = (params[0], 10**params[1], params[5])
-    ages = spectral_ages(params_ages, B_eq, z)
+    ages = None
+    if B_eq is not None and z is not None:
+        ages = spectral_ages(params_ages, B_eq, z)
 
     plot_spectrum(observed_data, obsname, model_data, plotting_data, fit_type, params, ages, WLLS_params)
 
@@ -227,9 +229,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Fit synchrotron spectrum to radio data")
     parser.add_argument("--data", type=str, required=True,help="Name of the data file (.dat format)")
     parser.add_argument("--fit_type", type=str, required=True, help="Name of the fit type (CI, TCI, ...)")
-    parser.add_argument("-B", type=float, required=True, help="Magnetic field strength in T")
-    parser.add_argument("-z", type=float, required=True, help="Redshift of the source") 
-    parser.add_argument("--remnant_range", dest='remnant_range', type=float, nargs='+', default=[0, 1],
+    parser.add_argument("-B", type=float, required=False, help="Magnetic field strength in T")
+    parser.add_argument("-z", type=float, required=False, help="Redshift of the source") 
+    parser.add_argument("--remnant_range", required=False, dest='remnant_range', type=float, nargs='+', default=[0, 1],
                         help="(Default = [0, 1]) Accepted range for the remnant ratio")
     parser.add_argument("--data2", type=str, required=False, help="Any extra data to be plotted but not fitted")
     args = parser.parse_args()
