@@ -13,6 +13,7 @@ import glob
 plt.style.use('seaborn-v0_8-bright')
 plt.rcParams["font.family"] = "serif"
 
+#TODO change to using one function instead of 2 
 def plot_first_four_sources(fits_files, output_file):
     fig = plt.figure(figsize=(15, 0.8*15 * np.sqrt(2)))  
     labels = ['(a)', '(b)', '(c)', '(d)']
@@ -45,7 +46,7 @@ def plot_first_four_sources(fits_files, output_file):
         contour_levels = np.logspace(np.log10(3), np.log10(maxlvl), num=int((np.log10(maxlvl) - np.log10(3)) / dex +1)) * rms
         # Plot spectral index map
         ax1 = fig.add_subplot(4, 3, i * 3 + 1, projection=wcs)
-        im1 = ax1.imshow(spectral_index_map, origin='lower', cmap='turbo', interpolation='none', vmin=-4, vmax=-0.5) #gist_rainbow_r
+        im1 = ax1.imshow(-1*spectral_index_map, origin='lower', cmap='turbo_r', interpolation='none', vmin=0.5, vmax=4) #gist_rainbow_r
         ax1.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax1.get_transform(wcs))
         ax1.tick_params(direction='in') #width=2
         if i == 0:
@@ -73,11 +74,11 @@ def plot_first_four_sources(fits_files, output_file):
         
         # Chi2red map
         ax3 = fig.add_subplot(4, 3, i * 3 + 3, projection=wcs)
-        im3 = ax3.imshow(chi2red_map, origin='lower', cmap='viridis', interpolation='none', norm=LogNorm())
+        im3 = ax3.imshow(chi2red_map, origin='lower', cmap='inferno', interpolation='none', norm=LogNorm())
         ax3.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax3.get_transform(wcs))
         ax3.tick_params(direction='in')
         if i == 0:
-            ax3.set_title('Reduced Chi-Square')
+            ax3.set_title(r'$\chi^2_{red}$')
         ax3.coords[0].set_axislabel('R.A. (J2000)')
         ax3.coords[1].set_ticklabel_visible(False)
         ax3.coords[1].set_axislabel('')
@@ -90,7 +91,7 @@ def plot_first_four_sources(fits_files, output_file):
             if host_coords is not None:
                 for i,c in enumerate(host_coords, start=1):
                     ax.plot(c.ra.deg, c.dec.deg,marker='x', color='black', transform=ax.get_transform('fk5'), markersize=10)
-                    ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='black', transform=ax.get_transform('fk5'), fontsize=6, ha='left', va='top')
+                    ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='black', transform=ax.get_transform('fk5'), fontsize=10, ha='left', va='top')
         
     plt.tight_layout()
     plt.savefig(output_file)
@@ -129,7 +130,7 @@ def plot_remaining_sources(fits_files, output_file):
 
         # spectral index map
         ax1 = fig.add_subplot(4, 3, i * 3 + 1, projection=wcs)
-        im1 = ax1.imshow(spectral_index_map, origin='lower', cmap='turbo', interpolation='none', vmin=-2.5, vmax=-0.5) #gist rainbow
+        im1 = ax1.imshow(-1*spectral_index_map, origin='lower', cmap='turbo_r', interpolation='none', vmin=0.5, vmax=3) #gist rainbow
         ax1.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax1.get_transform(wcs))
         ax1.tick_params(direction='in')
         if i == 0:
@@ -157,7 +158,7 @@ def plot_remaining_sources(fits_files, output_file):
         ax3.contour(image, levels=contour_levels, colors='black', alpha=0.8, transform=ax3.get_transform(wcs))
         ax3.tick_params(direction='in')
         if i == 0:
-            ax3.set_title('Reduced Chi-Square')
+            ax3.set_title(r'$\chi^2_{red}$')
         ax3.coords[0].set_axislabel('R.A. (J2000)')
         ax3.coords[1].set_ticklabel_visible(False)
         ax3.coords[1].set_axislabel('')
@@ -170,7 +171,7 @@ def plot_remaining_sources(fits_files, output_file):
             if host_coords is not None:
                 for i,c in enumerate(host_coords, start=1):
                     ax.plot(c.ra.deg, c.dec.deg,marker='x', color='black', transform=ax.get_transform('fk5'), markersize=10)
-                    ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='black', transform=ax.get_transform('fk5'), fontsize=6, ha='left', va='top')
+                    ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='black', transform=ax.get_transform('fk5'), fontsize=10, ha='left', va='top')
     
     plt.tight_layout()
     plt.savefig(output_file)
