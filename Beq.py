@@ -15,16 +15,16 @@ def calculate_Bme(k, eta, z, alpha, theta_x, theta_y_s, s, phi, F0, nu_0, nu_1, 
 
 k = 1
 eta = 1
-z = 0.032303145
-alpha = -1.31
-theta_min = 20  # in arcsec
-theta_max = 36# in arcsec
-s = theta_min * 4.671
+z = 0.1301
+alpha = -1.91
+theta_min = 31  # in arcsec
+theta_max = 50# in arcsec
+s = theta_min * 2.335
 phi = np.pi / 2  # rad
-F0 =0.065902169 #in Jy
-nu_0 = 8.486751  # in GHz 
-nu_1 = 8.48  # in GHz
-nu_2 = 11.5  # in GHz
+F0 = 4.937529106697287#in Jy
+nu_0 = 0.155  # in GHz 
+nu_1 = 0.088  # in GHz
+nu_2 = 0.2  # in GHz
 
 # Calculate Bme
 Bme_value = calculate_Bme(k, eta, z, alpha, theta_min, theta_max,s, phi, F0, nu_0, nu_1, nu_2)

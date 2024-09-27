@@ -269,7 +269,7 @@ if __name__ == "__main__":
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
     
-    reg_file = 'regs/bot_inner.reg' #flux_reg
+    reg_file = 'regs/ll_flux.reg' #flux_reg
     bkg_file = 'regs/bkg_flux_reg.reg'
     
 
@@ -295,7 +295,7 @@ if __name__ == "__main__":
     print(frequencies)
     plot_sed(frequencies, int_fluxes, dint_fluxes, args.data)
     
-    with open("spectra_data.dat", "w") as file:
+    with open("spectra.dat", "w") as file:
         file.write("Spectra,Frequency (Hz),Photometry (Jy),Uncertainty (Jy)\n")
         for freq, int_flux, dint_flux in zip(frequencies, int_fluxes, dint_fluxes):
             file.write(f"VLA,{freq},{int_flux},{dint_flux}\n")
