@@ -93,7 +93,7 @@ def plot_first_four_sources(fits_files, output_file):
                     ax.plot(c.ra.deg, c.dec.deg,marker='x', color='black', transform=ax.get_transform('fk5'), markersize=10)
                     ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='black', transform=ax.get_transform('fk5'), fontsize=10, ha='left', va='top')
         
-    plt.tight_layout()
+    fig.tight_layout(w_pad=0, h_pad=0.2)
     plt.savefig(output_file)
     plt.close(fig)
 
