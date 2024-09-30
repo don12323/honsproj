@@ -18,7 +18,7 @@ def main(infrared_fits, rms_c, contour_fits, coords_file):
     # Infrared image
     with fits.open(infrared_fits) as ir_hdul:
         ir_data = ir_hdul[0].data
-        ir_wcs = WCS(ir_hdul[0].header)
+        ir_wcs = WCS(ir_hdul[0].header, naxis=2)
     # Contour image
     with fits.open(contour_fits) as contour_hdul:
         contour_data = contour_hdul[0].data
@@ -42,12 +42,12 @@ def main(infrared_fits, rms_c, contour_fits, coords_file):
 #    cont_reproj, _ = reproject_interp((contour_data, contour_wcs), radio_wcs, shape_out=radio_data.shape)
     # Use radio im WCS projection
     #fig, ax = plt.subplots(figsize=(7, 5), subplot_kw={'projection': radio_wcs})
-    fig = plt.figure(figsize=(7, 5))
+    fig = plt.figure(figsize=(6, 4))
     ax = fig.add_subplot(111, projection=ir_wcs)
     # Plot the reprojected infrared im #TODO Interpolation messes up the infrared image in some cases
-    ax.imshow(ir_data, cmap='gray_r', origin='lower',
+    ax.imshow(ir_data[0], cmap='gray_r', origin='lower',
               vmin=np.percentile(ir_data, 1),
-              vmax=np.percentile(ir_data, 98.3))
+              vmax=np.percentile(ir_data, 99.3))
 
 
     ax.set_xlabel('R.A. (J2000)')
@@ -61,7 +61,7 @@ def main(infrared_fits, rms_c, contour_fits, coords_file):
     #contour_lvls = np.array([3, 6, 9, 12, 15, 18, 21, 24]) * rms_c
     #contour_lvls = np.array([i for i in range(3,69,9)]) * rms_c
 
-    contour_lvls = np.logspace(np.log10(3), np.log10(25), num=int((np.log10(25) - np.log10(3)) / 0.2 +1)) * rms_c
+    contour_lvls = np.logspace(np.log10(3), np.log10(25), num=int((np.log10(20) - np.log10(3)) / 0.15 +1)) * rms_c
     print(contour_lvls/rms_c)
     ax.contour(contour_data, levels=contour_lvls, colors='black', linewidths=1,transform=ax.get_transform(contour_wcs))
 #    ax.contour(radio_data, levels=[3 * rms_r], linewidths=1,cmap='inferno', alpha=0.6,transform=ax.get_transform(radio_wcs))
@@ -73,7 +73,7 @@ def main(infrared_fits, rms_c, contour_fits, coords_file):
             ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='red', transform=ax.get_transform('fk5'), fontsize=8, ha='left', va='top')
 
     # Add synthesized beam
-    wcsaxes.add_beam(ax, header=contour_header,alpha=0.8,pad=0.65)
+    wcsaxes.add_beam(ax, header=contour_header,alpha=0.8,pad=0.65, facecolor='none',edgecolor='black', frame=True)
     #wcsaxes.add_beam(ax,header=radio_header,alpha=0.8, color='orange',pad=0.65) 
     # Add the radio image color bar
     #cbar = fig.colorbar(ax.images[-1], ax=ax, shrink=1, pad=0.01) #pad=0.04
