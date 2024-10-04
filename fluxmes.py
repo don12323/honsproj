@@ -23,12 +23,10 @@ import warnings
 import sys
 import csv
 
-#style
 plt.style.use('seaborn-v0_8-bright')
 plt.rcParams["font.family"] = "serif"
 plt.rcParams["axes.grid"] = False
 
-#ignore warnings from wcs
 warnings.simplefilter('ignore', AstropyWarning)
 
 class Colors:
@@ -82,7 +80,7 @@ def extract_header_data(filename):
             print(f"{Colors.FAIL}Error: NAXIS is not equal to 2 for file: {filename}{Colors.ENDC}")
             sys.exit(1)
         
-        #find pixel size in degrees. Pixel area in degrees = (pixd1*pixd2)
+        # Find pixel size in degrees
         try:
             pixd1, pixd2 = header["CDELT1"], header["CDELT2"]
         except KeyError:
@@ -103,9 +101,8 @@ def extract_header_data(filename):
 
     
 def measure_flux(header,data, pixarea, barea, reg_file, bkg_file):
-    #TODO there's a jump down in frequency when switching to the zoomed out images-probs gets fixed when you regrid everything
     
-    #read polygon region file and get pixel coordinates
+    # Read polygon region file and get pixel coordinates
     regions = pyregion.open(reg_file).as_imagecoord(header=header)
     poly_coords=[]
     for region in regions:
@@ -114,7 +111,7 @@ def measure_flux(header,data, pixarea, barea, reg_file, bkg_file):
     
     reg_polygon = Polygon(poly_coords)
 
-    #read in background polygon in image coordinates
+    # Read in background polygon in image coordinates
     bkg_regions = pyregion.open(bkg_file).as_imagecoord(header=header)
     
     source_polygons = []
@@ -125,7 +122,7 @@ def measure_flux(header,data, pixarea, barea, reg_file, bkg_file):
         source_polygons.append(Polygon(poly_coords))
 
 
-    #calculate the mean background flux
+    # Calculate the mean background flux
     npix_bkg=0
     bkg_flux_values = []
     bkg_squared = []
@@ -134,7 +131,7 @@ def measure_flux(header,data, pixarea, barea, reg_file, bkg_file):
     for y in range(math.ceil(min_y), math.floor(max_y)):
         for x in range(math.ceil(min_x), math.floor(max_x)):
             point = Point(x,y)
-            #corners
+            # Corners
             if all(not poly.contains(point) for poly in source_polygons) and not np.isnan(data[y - 1, x - 1]):
              #   print(x,y) 
                 bkg_flux_values.append(data[y-1,x-1])
@@ -147,8 +144,6 @@ def measure_flux(header,data, pixarea, barea, reg_file, bkg_file):
     print(f"   {Colors.OKGREEN}Background mean flux: {bkg_flux} +\- {std_bkg} Jy/beam{Colors.ENDC}")
     print("   Number of pixels in background: ",npix_bkg) 
     print(f"   rms_bkg: {rms_bkg}")
-    
-    #calculate integrated flux for in reg file
     print("\n")
     print(f"   {Colors.UNDERLINE}CALCULATING FLUX {Colors.ENDC}")
     
@@ -172,9 +167,9 @@ def measure_flux(header,data, pixarea, barea, reg_file, bkg_file):
     #calculate the integrated flux
     print(f"   Number of pixels in region: {npix_reg} Size: {npix_reg*pixarea*3600**2:.2f} arcsec^2")
     int_flux = (total_flux_in_reg * pixarea / barea)-(bkg_flux * npix_reg *pixarea / barea) #-TODO (bkg_flux * npix_hex * pixarea / barea) #bkg_flux*(nbeams inside hex)
-    #uncertainties
-    rms = np.sqrt(np.mean(np.array(flux_squared)))      #TODO Are we supposed to use rms in hex for uncertainty??
-    uncertainty = np.sqrt((0.02 * int_flux)**2+ (rms_bkg * npix_reg * pixarea / barea)**2) #TODO **IMPORTANT**check with supv if error is associated with each pix or final flux
+    # Uncertainties
+    #rms = np.sqrt(np.mean(np.array(flux_squared)))
+    uncertainty = np.sqrt((0.02 * int_flux)**2+ (rms_bkg * npix_reg * pixarea / barea)**2) 
     
     print(f"   bkg tot flux in reg: {bkg_flux * npix_reg * pixarea / barea}")
     print(f"   Integrated Flux = {int_flux*10**3:.4f} +\- {uncertainty*10**3:.6f} mJy, ")
@@ -187,14 +182,14 @@ def plotPolygons(reg_polygon, wcs, header, data, source_polygons, rms):
     ax = fig.add_subplot(1,1,1,projection=wcs)
     im=ax.imshow(data, cmap='gray')
 
-    #contours
+    # Contours
     contour_levels = rms * np.array([3,6,9]) #[-3, 3, 6, 9]
     contours = ax.contour(data, levels=contour_levels, colors='white', linewidths=0.5, linestyles='dashed')
      
-    #plot region
+    # Plot region
     reg_patch = MtPltPolygon(reg_polygon.exterior.coords, closed=True, edgecolor='red', fill=False)
     ax.add_patch(reg_patch)
-    #plot background
+    # Plot background
     for poly in source_polygons:
         bkg_patch = MtPltPolygon(poly.exterior.coords, closed=True, edgecolor='blue', fill=False)
         ax.add_patch(bkg_patch)
@@ -265,7 +260,7 @@ if __name__ == "__main__":
     parser.add_argument('--data', type=str, help="File containing total flux data")
     args = parser.parse_args()
 
-    #read in FITS files
+    # Read in FITS files
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
     
@@ -278,20 +273,20 @@ if __name__ == "__main__":
     dint_fluxes = []
 
     for f in fits_files:
-        # read in data
+        # Read in data
         data, wcs, header, pixd1, pixd2, barea, freq = extract_header_data(f)
         
-        #measure flux in each hexagon
+        # Measure flux in each hexagon
         bkg_polygon, reg_polygon, rms_bkg, int_flux, dint_flux= measure_flux(header, data, abs(pixd2*pixd1), barea, reg_file, bkg_file)
         
         frequencies.append(freq)
         int_fluxes.append(int_flux)
         dint_fluxes.append(dint_flux)
 
-        #plotting
+        # Plotting
         plotPolygons(reg_polygon, wcs, header, data, bkg_polygon, rms_bkg) 
         print("\n")
-    #plot sed for each hex
+    # Plot sed for each hex
     print(frequencies)
     plot_sed(frequencies, int_fluxes, dint_fluxes, args.data)
     
