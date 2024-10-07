@@ -1,19 +1,15 @@
 #!/bin/bash
 
-# Set the path to your data directory and region files
 DATA_DIR="/mnt/c/Users/Imesh/Desktop/data"
 INPUT_FILE="input.txt"  # This file will be generated for each source
 REG_FILE="flux.reg"
 BKG_FILE="bkg.reg"
 PYTHON_SCRIPT="measure_flux.py"  # Your modified Python script from before
 
-# Output file for the spectral indices
 OUTPUT_FILE="spectral_indices.txt"
 
-# Create or clear the output file
 echo "Source,Alpha,Alpha_Error" > $OUTPUT_FILE
 
-# Iterate over each directory in the data directory
 for SOURCE_DIR in "$DATA_DIR"/*; do
     # Check if it is a directory
     if [ -d "$SOURCE_DIR" ]; then
