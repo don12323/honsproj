@@ -47,7 +47,7 @@ def main(infrared_fits, rms_c, contour_fits, coords_file):
     # Plot the reprojected infrared im #TODO Interpolation messes up the infrared image in some cases
     ax.imshow(ir_data[0], cmap='gray_r', origin='lower',
               vmin=np.percentile(ir_data, 1),
-              vmax=np.percentile(ir_data, 99.3))
+              vmax=np.percentile(ir_data, 99.8))
 
 
     ax.set_xlabel('R.A. (J2000)')
@@ -61,7 +61,7 @@ def main(infrared_fits, rms_c, contour_fits, coords_file):
     #contour_lvls = np.array([3, 6, 9, 12, 15, 18, 21, 24]) * rms_c
     #contour_lvls = np.array([i for i in range(3,69,9)]) * rms_c
 
-    contour_lvls = np.logspace(np.log10(3), np.log10(25), num=int((np.log10(20) - np.log10(3)) / 0.15 +1)) * rms_c
+    contour_lvls = np.logspace(np.log10(3), np.log10(25), num=int((np.log10(25) - np.log10(3)) / 0.2 +1)) * rms_c
     print(contour_lvls/rms_c)
     ax.contour(contour_data, levels=contour_lvls, colors='black', linewidths=1,transform=ax.get_transform(contour_wcs))
 #    ax.contour(radio_data, levels=[3 * rms_r], linewidths=1,cmap='inferno', alpha=0.6,transform=ax.get_transform(radio_wcs))
@@ -79,7 +79,7 @@ def main(infrared_fits, rms_c, contour_fits, coords_file):
     #cbar = fig.colorbar(ax.images[-1], ax=ax, shrink=1, pad=0.01) #pad=0.04
     #cbar.set_label('Brightness (mJy/beam)')
 
-    kpc_per_arcsec = 1.540 * u.kpc / u.arcsec
+    kpc_per_arcsec = 2.335 * u.kpc / u.arcsec
 
     # Scale bar length in kpc
     scale_length_kpc = 50 * u.kpc

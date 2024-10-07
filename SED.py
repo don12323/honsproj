@@ -114,7 +114,7 @@ if __name__ == "__main__":
     
     output_dir = '/data/donwijesinghe/results'   # Path to the directory where the plot will be saved
 
-    beta_lower, Stderr_lower, beta_upper, Stderr_upper, lower, upper = splitWLLS(S, f, Serr, 0.2)
+    beta_lower, Stderr_lower, beta_upper, Stderr_upper, lower, upper = splitWLLS(S, f, Serr, 1.45)
     plot_sed(S, f, Serr, input_file, output_dir,beta_lower, Stderr_lower, beta_upper, Stderr_upper, lower, upper)
 
 

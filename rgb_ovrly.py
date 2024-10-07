@@ -95,17 +95,17 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     alpha_stretch = AsinhStretch(a=0.5)
     alpha = alpha_stretch(alpha)
     # Overlay masked radio im in mJy 
-    gaus_bl = gaussian_filter(mask.astype(float), sigma=3)*0.99
+    #gaus_bl = gaussian_filter(mask.astype(float), sigma=3)*0.99
     ax.imshow(radio_interp * 1e3, cmap='magma', origin='lower', #gist_heat
-            alpha = alpha)
-            #alpha=gaussian_filter(mask.astype(float), sigma=150)*1) # Blend from 0.9 alpha
+            #alpha = alpha)
+            alpha=gaussian_filter(mask.astype(float), sigma=10)*0.9) # Blend from 0.9 alpha
 
     ax.tick_params(direction='in', colors='white')
     ax.tick_params(axis='x', which='both', labelcolor='black')
     ax.tick_params(axis='y', which='both', labelcolor='black')
 
     # Plot radio contours 'YlOrd'
-    contour_lvls = np.logspace(np.log10(3), np.log10(22), num=int((np.log10(22) - np.log10(3)) / 0.15 +1)) * rms_c
+    contour_lvls = np.logspace(np.log10(3), np.log10(15), num=int((np.log10(15) - np.log10(3)) / 0.15 +1)) * rms_c
     print(contour_lvls/rms_c)
     ax.contour(contour_data, levels=contour_lvls, cmap='YlOrRd', linewidths=0.5, alpha=0.4,transform=ax.get_transform(contour_wcs))
     
@@ -122,11 +122,11 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     # Radio image color bar
     cbar = fig.colorbar(ax.images[-1], ax=ax, shrink=1, pad=0.01,aspect=40) #pad=0.04
     cbar.set_label('Brightness (mJy/beam)')
-    # Scale
-    kpc_per_arcsec = 1.54 * u.kpc / u.arcsec
+    # Scalei
+    kpc_per_arcsec = 5.141 * u.kpc / u.arcsec
 
     # Scale bar length in kpc
-    scale_length_kpc = 50 * u.kpc
+    scale_length_kpc = 100 * u.kpc
     scale_length_arcsec = scale_length_kpc / kpc_per_arcsec
 
     # Convert to deg

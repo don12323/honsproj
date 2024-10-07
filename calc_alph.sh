@@ -18,14 +18,11 @@ for SOURCE_DIR in "$DATA_DIR"/*; do
         REG_FILE_PATH="$SOURCE_DIR/$REG_FILE"
         BKG_FILE_PATH="$SOURCE_DIR/$BKG_FILE"
         
-        # Proceed only if FITS files and both region files exist
         if [ -f "$REG_FILE_PATH" ] && [ -f "$BKG_FILE_PATH" ] && [ ${#FITS_FILES[@]} -gt 0 ]; then
             echo "Processing source: $(basename "$SOURCE_DIR")"
 
-            # Create the input.txt file containing the list of FITS files for this source
             echo "${FITS_FILES[@]}" > "$SOURCE_DIR/$INPUT_FILE"
             
-            # Call the Python script to process this source
             python3 $PYTHON_SCRIPT --input_file "$SOURCE_DIR/$INPUT_FILE" --output_file "$OUTPUT_FILE" --reg_file "$REG_FILE_PATH" --bkg_file "$BKG_FILE_PATH"
         else
             echo "Skipping directory: $(basename "$SOURCE_DIR") - missing required files"
