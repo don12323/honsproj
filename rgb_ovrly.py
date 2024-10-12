@@ -45,21 +45,13 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
         contour_header = contour_hdul[0].header
 
     # Load coordinates from text file
-    coords_list = []
-    with open(coords_file, 'r') as file:
-        for line in file:
-            ra, dec = map(float, line.strip().split(','))
-            coords_list.append((ra, dec))
-
-    host_coords = SkyCoord(ra=[c[0] for c in coords_list] * u.deg, 
-                           dec=[c[1] for c in coords_list] * u.deg, frame='fk5')
 
     # Create mask for values greater than 3*rms
     
     # normalize
-    pct = 99.6
+    pct = 99.9
     interval = PercentileInterval(pct)
-    stretch =AsinhStretch(a=0.04) + PowerDistStretch(a=1000)  #makes bkg noise worse
+    stretch =AsinhStretch(a=0.1) + PowerDistStretch(a=10000)  #makes bkg noise worse
 
     i = interval.get_limits(ir_data[0])
     r = stretch(normalize(ir_data[0], *i))
@@ -96,29 +88,43 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     alpha = alpha_stretch(alpha)
     # Overlay masked radio im in mJy 
     #gaus_bl = gaussian_filter(mask.astype(float), sigma=3)*0.99
-    ax.imshow(radio_interp * 1e3, cmap='magma', origin='lower', #gist_heat
-            #alpha = alpha)
-            alpha=gaussian_filter(mask.astype(float), sigma=10)*0.9) # Blend from 0.9 alpha
+    ax.imshow(radio_interp * 1e3, cmap='magma', origin='lower',
+            #alpha=alpha)#gist_heat
+            alpha=gaussian_filter(mask.astype(float), sigma=30)*0.9) # Blend from 0.9 alpha
 
+            #alpha = alpha)
     ax.tick_params(direction='in', colors='white')
     ax.tick_params(axis='x', which='both', labelcolor='black')
     ax.tick_params(axis='y', which='both', labelcolor='black')
 
     # Plot radio contours 'YlOrd'
-    contour_lvls = np.logspace(np.log10(3), np.log10(15), num=int((np.log10(15) - np.log10(3)) / 0.15 +1)) * rms_c
+    contour_lvls = np.logspace(np.log10(3), np.log10(40), num=int((np.log10(40) - np.log10(3)) / 0.2 +1)) * rms_c
     print(contour_lvls/rms_c)
     ax.contour(contour_data, levels=contour_lvls, cmap='YlOrRd', linewidths=0.5, alpha=0.4,transform=ax.get_transform(contour_wcs))
     
     # Mark possible hg positions
-    for i, c in enumerate(host_coords,start=1):
-        ax.plot(c.ra.deg, c.dec.deg,marker='x', color='cyan',transform=ax.get_transform('fk5'), markersize=6)
-        if len(host_coords) > 1:
-            ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='cyan', 
-                    transform=ax.get_transform('fk5'), fontsize=6, ha='left', va='top')
+
+    if coords_file is not None:
+
+        coords_list = []
+        with open(coords_file, 'r') as file:
+            for line in file:
+                ra, dec = map(float, line.strip().split(','))
+                coords_list.append((ra, dec))
+
+        host_coords = SkyCoord(ra=[c[0] for c in coords_list] * u.deg, 
+                               dec=[c[1] for c in coords_list] * u.deg, frame='fk5')
+
+
+        for i, c in enumerate(host_coords,start=1):
+            ax.plot(c.ra.deg, c.dec.deg,marker='x', color='cyan',transform=ax.get_transform('fk5'), markersize=6)
+            if len(host_coords) > 1:
+                ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='cyan', 
+                        transform=ax.get_transform('fk5'), fontsize=6, ha='left', va='top')
 
     # Add synthesized beam
     wcsaxes.add_beam(ax, header=contour_header,alpha=0.9,pad=0.65,frame=False)
-    wcsaxes.add_beam(ax,header=radio_header,color='orange',alpha=0.9,pad=0.9) 
+    wcsaxes.add_beam(ax,header=radio_header,color='orange',alpha=0.9,pad=1.1) 
     # Radio image color bar
     cbar = fig.colorbar(ax.images[-1], ax=ax, shrink=1, pad=0.01,aspect=40) #pad=0.04
     cbar.set_label('Brightness (mJy/beam)')
@@ -133,8 +139,8 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     scale_length_deg = scale_length_arcsec.to(u.deg)
     
     # Add the scale bar
-    wcsaxes.add_scalebar(ax, length=scale_length_deg, label=f'{scale_length_kpc.value:.0f} kpc',
-            corner='bottom right', frame=False, color='white')
+    #wcsaxes.add_scalebar(ax, length=scale_length_deg, label=f'{scale_length_kpc.value:.0f} kpc',
+            #corner='bottom right', frame=False, color='white')
     
     # Plot and save
     fig.tight_layout()
@@ -150,7 +156,7 @@ if __name__ == "__main__":
     parser.add_argument('--rms_r', type=float, required=True, help='RMS value of the radio image')
     parser.add_argument('--contour',required=True,help="Path to the contour FITS image")
     parser.add_argument('--rms_c', type=float, required=True, help='RMS value of the radio image')
-    parser.add_argument('--coords', required=True, help='Path to the text file containing host galaxy coordinates')
+    parser.add_argument('--coords', required=False, help='Path to the text file containing host galaxy coordinates')
 
     args = parser.parse_args()
 
