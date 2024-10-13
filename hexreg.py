@@ -23,12 +23,11 @@ import warnings
 import sys
 import csv
 
-#style
 plt.style.use('seaborn-v0_8-bright')
 plt.rcParams["font.family"] = "serif"
 plt.rcParams["axes.grid"] = False
 
-#ignore warnings from wcs
+# Ignore warnings from wcs (made outputs clear)
 warnings.simplefilter('ignore', AstropyWarning)
 
 class Colors:
@@ -57,7 +56,6 @@ class Hexagon:
     def add_flux(self, flux, uncertainty):
         self.fluxes.append((flux,uncertainty))
 
-#function for calculating hexagon vertices
 def calc_hex_vert(centre, width):
     vertices = []
     r = width*(1/np.sqrt(3))*0.99
@@ -107,7 +105,7 @@ def extract_header_data(filename):
             print(f"{Colors.FAIL}Error: NAXIS is not equal to 2 for file: {filename}{Colors.ENDC}")
             sys.exit(1)
         
-        #find pixel size in degrees. Pixel area in degrees = (pixd1*pixd2)
+        # Find pixel size in degrees. Pixel area in degrees = (pixd1*pixd2)
         try:
             pixd1, pixd2 = header["CDELT1"], header["CDELT2"]
         except KeyError:
@@ -128,7 +126,7 @@ def extract_header_data(filename):
 
 def polygons(reg_file, header, width, pix1, hexagons):
     
-    #read polygon region file and get pixel coordinates
+    # Read polygon region file and get pixel coordinates
     regions = pyregion.open(reg_file).as_imagecoord(header=header)
     poly_coords=[]
     for region in regions:
@@ -136,27 +134,27 @@ def polygons(reg_file, header, width, pix1, hexagons):
             poly_coords.append((region.coord_list[i], region.coord_list[i+1])) 
     
     polygon = Polygon(poly_coords)
-    #create bounding rectangle on polygon
+    # Create bounding rectangle on polygon
     xmin, ymin, xmax, ymax = polygon.bounds
-    #convert width from arcsec to pixel units
+    # Convert width from arcsec to pixel units
     width = width / (abs(pixd1) * 3600)
-    #find hexagon centres that fit inside rectangle
+    # Find hexagon centres that fit inside rectangle
     centres = []
     for y in np.arange(ymin-width,ymax, width):
         for x in np.arange(xmin-width*np.sqrt(3), xmax, width*np.sqrt(3)):
             centres.append((x,y))
             centres.append((x+width*np.sqrt(3)/2, y + width/2))
 
-    #filter out centres that lie inside polygon
+    # Filter out centres that lie inside polygon
     centres = [point for point in centres if polygon.contains(Point(point))]
-    #filter out centres that have vertices outside polygon boundaries
+    # Filtrer out centres that have vertices outside polygon boundaries
     new_centres = []
     for centre in centres:
         hex_vertices = calc_hex_vert(centre, width)
         if all(polygon.contains(Point(v)) for v in hex_vertices):
             new_centres.append(centre)
 
-    #form hexagons/update their attributes
+    # Form hexagons/update their attributes
     if hexagons is None:
         hexagons=[]
         i=0
@@ -190,7 +188,7 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
         source_polygons.append(Polygon(poly_coords))
 
 
-    #calculate the mean background flux
+    # Calculate the mean background flux
     npix_bkg=0
     bkg_flux_values = []
     bkg_pixels = []
@@ -200,7 +198,7 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     for y in range(math.ceil(min_y), math.floor(max_y)):
         for x in range(math.ceil(min_x), math.floor(max_x)):
             point = Point(x,y)
-            #corners
+            # Corners
             if all(not poly.contains(point) for poly in source_polygons) and not np.isnan(data[y - 1, x - 1]):
              #   print(x,y) 
                 bkg_flux_values.append(data[y-1,x-1])
@@ -214,7 +212,7 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
     print(f"   {Colors.OKGREEN}Background mean flux: {bkg_flux} +\- {std_bkg} Jy/beam{Colors.ENDC}")
     print("   Number of pixels in background: ",npix_bkg) 
     print(f"rms_bkg: {rms_bkg}")
-    #calculate integrated flux for each hexagon
+    # Calculate integrated flux for each hexagon
     print("\n")
     print(f"   {Colors.UNDERLINE}CALCULATING FLUXES FOR HEX{Colors.ENDC}")
     
@@ -237,15 +235,15 @@ def measure_flux(header, hexagons, data, pixarea, barea, bkg_file):
                     flux_squared.append(data[y-1,x-1]**2)
 
 
-        #calculate the integrated flux
+        # calculate the integrated flux
         print(f"   Number of pixels in hex {hexagon.name}: {npix_hex} Size: {npix_hex*pixarea*3600**2:.2f} arcsec^2")
         int_flux = (total_flux_in_hex * pixarea / barea) -(bkg_flux * npix_hex *pixarea / barea) #-TODO (bkg_flux * npix_hex * pixarea / barea) #bkg_flux*(nbeams inside hex)
         total_fluxes.append(int_flux)
-        #uncertainties
+        # uncertainties
         rms = np.sqrt(np.mean(np.array(flux_squared)))      #TODO Are we supposed to use rms in hex for uncertainty??
         uncertainty = np.sqrt(rms_bkg**2 + (0.02 * int_flux)**2 + (std_bkg * npix_hex * pixarea / barea)**2) #TODO **IMPORTANT**check with supv if error is associated with each pix or final flux
         uncertainties.append(uncertainty)
-        #add flux to hex
+        # add flux to hex
         hexagon.add_flux(int_flux,uncertainty)
         print(f"   bkg tot flux in hex: {bkg_flux * npix_hex * pixarea / barea}")
 
@@ -260,7 +258,7 @@ def plotPolygons(region, hexagons, wcs, header, data, source_polygons, rms, bkg_
     ax = fig.add_subplot(1,1,1,projection=wcs)
     im=ax.imshow(data, cmap='gray')
 
-    #contours
+    #Contours
     contour_levels = rms * np.array([3,6,9]) #[-3, 3, 6, 9]
     contours = ax.contour(data, levels=contour_levels, colors='white', linewidths=0.5, linestyles='dashed')
     ax.add_patch(region)
@@ -270,7 +268,7 @@ def plotPolygons(region, hexagons, wcs, header, data, source_polygons, rms, bkg_
         ax.add_patch(patch)
         ax.annotate(hexagon.name, xy=hexagon.centre, ha='center', va='center', color=hexagon.color)   
     
-    #plot background
+    # Plot background
     for poly in source_polygons:
         bkg_patch = MtPltPolygon(poly.exterior.coords, closed=True, edgecolor='blue', fill=False)
         ax.add_patch(bkg_patch)
@@ -286,7 +284,6 @@ def plotPolygons(region, hexagons, wcs, header, data, source_polygons, rms, bkg_
     plt.xlabel('RA')
     plt.ylabel('DEC')
     
-    #plot and save fig    
     plt.savefig("hex_grid_1.png")
 #    plt.show()
 
@@ -353,7 +350,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     width = args.width
 
-    #read in FITS files
+    # Read in FITS
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
     
@@ -368,16 +365,16 @@ if __name__ == "__main__":
 
         data, wcs, header, pixd1, pixd2, barea, freq = extract_header_data(f)
         poly_pix, hexagons = polygons(reg_file, header, width, pixd1, hexagons)
-        #measure flux in each hexagon
+        # Measure flux in each hexagon
         bkg_polygon, rms_bkg, bkg_pixels = measure_flux(header, hexagons, data, abs(pixd2*pixd1), barea, bkg_file)
         
         frequencies.append(freq)
 
-        #plotting
+        # Plotting
         region = MtPltPolygon(poly_pix, closed=True, edgecolor='r', linewidth=1, fill=False)
         plotPolygons(region, hexagons, wcs, header, data, bkg_polygon, rms_bkg, bkg_pixels) 
         print("\n")
-    #plot sed for each hex
+    # lot sed for each hex
     print(frequencies)
     plot_sed(hexagons, frequencies, args.data)
 

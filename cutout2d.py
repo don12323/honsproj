@@ -23,7 +23,7 @@ def create_cutout(fitsfile, ra, dec, size):
         cutout = Cutout2D(hdu.data, position, size, wcs=wcs)
         
         print("new data dim", cutout.data.ndim)
-        #update cutout header with new wcs 
+        # Update cutout header with new wcs 
         new_header = cutout.wcs.to_header()
         new_header['BMAJ'] = hdu.header['BMAJ']
         new_header['BMIN'] = hdu.header['BMIN']

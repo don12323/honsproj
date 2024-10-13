@@ -9,7 +9,7 @@ echo "regrid.sh [-i] [-t]
 exit 1;
 }
 
-#parse args and set options,
+# Pparse args and set options,
 while getopts ':i:t:' OPTION
 do
         case "$OPTION" in

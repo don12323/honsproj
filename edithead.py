@@ -6,12 +6,10 @@ new_file = '../fits/J01445_TGSS_corrected2.fits'
 with fits.open(original_file, mode='update') as hdul:
     header = hdul[0].header
     
-    # Correct the pixel scale values
     pixel_scale_deg = 0.0008
     header['CDELT1'] = -pixel_scale_deg
     header['CDELT2'] = pixel_scale_deg
     
-    # Add the RESTFRQ header attribute
     rest_frequency_hz = 150.e6
     header['RESTFRQ'] = rest_frequency_hz
     

@@ -164,7 +164,7 @@ def measure_flux(header,data, pixarea, barea, reg_file, bkg_file):
                 flux_squared.append(data[y-1,x-1]**2)
 
 
-    #calculate the integrated flux
+    # Ca;culate the integrated flux
     print(f"   Number of pixels in region: {npix_reg} Size: {npix_reg*pixarea*3600**2:.2f} arcsec^2")
     int_flux = (total_flux_in_reg * pixarea / barea)-(bkg_flux * npix_reg *pixarea / barea) #-TODO (bkg_flux * npix_hex * pixarea / barea) #bkg_flux*(nbeams inside hex)
     # Uncertainties

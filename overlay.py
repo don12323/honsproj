@@ -95,27 +95,21 @@ def main(infrared_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
 
     kpc_per_arcsec = 1.540 * u.kpc / u.arcsec
 
-    # Scale bar length in kpc
     scale_length_kpc = 50 * u.kpc
     scale_length_arcsec = scale_length_kpc / kpc_per_arcsec
-
-    # Convert to angular scale (arcseconds)
     scale_length_arcsec = (scale_length_kpc / kpc_per_arcsec).to(u.arcsec)
     scale_length_deg = scale_length_arcsec.to(u.deg)
     # Add the scale bar
 
     #wcsaxes.add_scalebar(ax, length=scale_length_deg, label=f'{scale_length_kpc.value:.0f} kpc',
     #        corner='bottom right', frame=False, color='white')
-    # Adjust layout and display the plot
     fig.tight_layout()
     plt.show()
 
-    # Save the figure to a file
     fig.savefig('overlay.pdf')
 
 
 if __name__ == "__main__":
-    # Argument parser setup
     parser = argparse.ArgumentParser(description='Overlay radio contours on an infrared image and mark possible host galaxies.')
     parser.add_argument('--infrared', required=True, help='Path to the infrared FITS image')
     parser.add_argument('--radio', required=True, help='Path to the radio FITS image')
@@ -126,6 +120,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Call the main function with parsed arguments
     main(args.infrared, args.radio, args.rms_r, args.rms_c, args.contour, args.coords)
 

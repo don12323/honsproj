@@ -1,10 +1,10 @@
 #!/bin/bash
 
 DATA_DIR="/mnt/c/Users/Imesh/Desktop/data"
-INPUT_FILE="input.txt"  # This file will be generated for each source
+INPUT_FILE="input.txt"  
 REG_FILE="flux.reg"
 BKG_FILE="bkg.reg"
-PYTHON_SCRIPT="measure_flux.py"  # Your modified Python script from before
+PYTHON_SCRIPT="measure_flux.py"  
 
 OUTPUT_FILE="spectral_indices.txt"
 

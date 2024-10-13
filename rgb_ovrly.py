@@ -128,21 +128,18 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     # Radio image color bar
     cbar = fig.colorbar(ax.images[-1], ax=ax, shrink=1, pad=0.01,aspect=40) #pad=0.04
     cbar.set_label('Brightness (mJy/beam)')
-    # Scalei
     kpc_per_arcsec = 5.141 * u.kpc / u.arcsec
 
-    # Scale bar length in kpc
     scale_length_kpc = 100 * u.kpc
     scale_length_arcsec = scale_length_kpc / kpc_per_arcsec
 
-    # Convert to deg
+    # Conv to deg
     scale_length_deg = scale_length_arcsec.to(u.deg)
     
     # Add the scale bar
     #wcsaxes.add_scalebar(ax, length=scale_length_deg, label=f'{scale_length_kpc.value:.0f} kpc',
             #corner='bottom right', frame=False, color='white')
     
-    # Plot and save
     fig.tight_layout()
     plt.show()
     fig.savefig('ovrly_magma_test.pdf')

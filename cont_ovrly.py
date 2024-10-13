@@ -83,33 +83,29 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2)
             if len(host_coords) > 1:
                 ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='red', transform=ax.get_transform('fk5'), fontsize=8, ha='left', va='top')
 
-    # Add synthesized beam
+    # Add beam
     wcsaxes.add_beam(ax, header=contour_header,alpha=0.8,pad=0.65, facecolor='none',edgecolor='black', frame=True)
     if rms_c2 is not None:
         wcsaxes.add_beam(ax, header=contour2_header,alpha=0.8,pad=0.65, facecolor='none',edgecolor='blue')
     kpc_per_arcsec = 2.335 * u.kpc / u.arcsec
 
-    # Scale bar length in kpc
+    # Scale bar in kpc
     scale_length_kpc = 50 * u.kpc
     scale_length_arcsec = scale_length_kpc / kpc_per_arcsec
-
-    # Convert to angular scale (arcseconds)
     scale_length_arcsec = (scale_length_kpc / kpc_per_arcsec).to(u.arcsec)
     scale_length_deg = scale_length_arcsec.to(u.deg)
     
     # Add the scale bar
     wcsaxes.add_scalebar(ax, length=scale_length_deg, label=f'{scale_length_kpc.value:.0f} kpc',
             corner='bottom right', frame=False, color='white')
-   #  Adjust layout and display the plot
+    
+
     fig.tight_layout()
     plt.show()
-
-    # Save the figure to a file
     fig.savefig('WISEplCONT.pdf')
 
 
 if __name__ == "__main__":
-    # Argument parser setup
     parser = argparse.ArgumentParser(description='Overlay radio contours on an infrared image and mark possible host galaxies.')
     parser.add_argument('--infrared', required=True, help='Path to the infrared FITS image')
     parser.add_argument('--contour',required=True,help="Path to the contour FITS image")
@@ -121,6 +117,5 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    # Call the main function with parsed arguments
     main(args.infrared, args.rms_c, args.contour, args.coords, args.contour2, args.rms_c2)
 

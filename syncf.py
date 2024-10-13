@@ -13,7 +13,6 @@ from sf.synchrofit import spectral_fitter, spectral_model_, spectral_ages #https
 plt.style.use('seaborn-v0_8-bright')
 plt.rcParams["font.family"] = "serif"
 
-# Define the function to read the .dat file
 def WLLS(S1, f1, Serr1):
 
     f = np.log10(np.array(f1))
@@ -137,12 +136,10 @@ def log_results(file_name, B_eq, z, remnant_range, fit_type, params, ages):
     if not os.path.exists('logs'):
         os.makedirs('logs')
 
-    # Create a unique log file name based on current timestamp
     timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
     log_filename = f'logs/{fit_type}_{timestamp}.log'
     
     with open(log_filename, 'w') as log_file:
-        # Log the input parameters
         log_file.write(f"Input Parameters:\n")
         log_file.write(f"Data File: {file_name}\n")
         if B_eq is not None and z is not None:
@@ -151,8 +148,6 @@ def log_results(file_name, B_eq, z, remnant_range, fit_type, params, ages):
         log_file.write(f"Remnant Range: {remnant_range}\n")
         log_file.write(f"Fit Type: {fit_type}\n\n")
         
-        # Log the params
-        log_file.write("Params:\n")
         log_file.write(f"fit_type         : {fit_type}\n")
         log_file.write(f"break_predict    : {10**(params[1]):.6f} (Hz)\n")
         log_file.write(f"dbreak_predict   : {10**(params[2]):.6f} (Hz)\n")
@@ -161,7 +156,6 @@ def log_results(file_name, B_eq, z, remnant_range, fit_type, params, ages):
         log_file.write(f"remnant_predict  : {params[5]:.6f}\n")
         log_file.write(f"dremnant_predict : {params[6]:.6f}\n")
         
-        # Log the spectral ages
         if ages is not None:
             log_file.write("Spectral Ages:\n")
             log_file.write(f"tau   : {ages[0]:.6f} Myr\n")
@@ -169,7 +163,6 @@ def log_results(file_name, B_eq, z, remnant_range, fit_type, params, ages):
             log_file.write(f"t_off : {ages[2]:.6f} Myr\n")
 
 def main(file_name, fit_type, B_eq, z, remnant_range, extra_data):
-    # Read the data
     obsname, frequency, photometry, uncertainty = read_dat_file(file_name)
     obsname
 
@@ -202,10 +195,10 @@ def main(file_name, fit_type, B_eq, z, remnant_range, extra_data):
 
 	
 
-    # Prepare observed data tuple
+    # Prep obsved data tuple
     observed_data = (frequency, photometry, uncertainty)
 
-    # Prepare plotting data tuple
+    # Prep plotting data tuple
     plotting_frequency = np.geomspace(10**(math.floor(np.min(np.log10(frequency)))),10**(math.ceil(np.max(np.log10(frequency)))), 100)
     plotting_data, err_plotting_data, plotting_data_min, plotting_data_max = spectral_model_(params, plotting_frequency)
     plotting_data = (plotting_frequency, plotting_data, err_plotting_data, plotting_data_min, plotting_data_max)
@@ -226,6 +219,7 @@ def main(file_name, fit_type, B_eq, z, remnant_range, extra_data):
     log_results(file_name, B_eq, z, remnant_range, fit_type, params, ages)
 
 if __name__ == "__main__":
+    #TODO Make it work for other models as well
     parser = argparse.ArgumentParser(description="Fit synchrotron spectrum to radio data")
     parser.add_argument("--data", type=str, required=True,help="Name of the data file (.dat format)")
     parser.add_argument("--fit_type", type=str, required=True, help="Name of the fit type (CI, TCI, ...)")

@@ -12,12 +12,10 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 import multiprocessing as mp
 
-#style
 plt.style.use('seaborn-v0_8-bright')
 plt.rcParams["font.family"] = "serif"
 plt.rcParams["axes.grid"] = False
 
-#TODO take sigma from highest frequency?? hgih freq has best res, but beam size is still the same so take contours from non-rgcv fits best
 
 #output these from hexreg.py? OR have this high freq fits file as an input so that bkg rms can be calculated.
 
@@ -56,7 +54,7 @@ def process_pixel(args):
         return i, j, alpha, err_alpha, chi2red
 
 def create_spectral_index_map(fits_files, output_file, cont_fits, rms, host_coords, maxlvl,dex):
-    # Read FITS files and gather data
+    # Read FITS and gather data
     data_list = []
     frequencies = []
     header = None
@@ -80,7 +78,7 @@ def create_spectral_index_map(fits_files, output_file, cont_fits, rms, host_coor
     spectral_index_map = np.zeros_like(data_stack[0])
     spectral_index_error_map = np.zeros_like(data_stack[0])
     chi2red_map = np.zeros_like(data_stack[0])
-    # Set up multiprocessing
+    # Multiprocessing
     tasks = [(i, j, data_stack, frequencies) for i in range(data_stack.shape[1]) for j in range(data_stack.shape[2])]
     num_processes = mp.cpu_count()
     with mp.Pool(processes=num_processes) as pool:
@@ -169,7 +167,7 @@ def plot_maps(spectral_index_map, spectral_index_error_map, chi2red_map, header,
     for ax in axes:
         ax.set_xlabel('RA (J2000)')
         ax.set_ylabel('DEC (J2000)')
-        #plot host galaxy
+        # Plot host galaxy
         if host_coords is not None:
             for i, c in enumerate(host_coords, start=1):
                 #ax.plot(c.ra.deg, c.dec.deg, marker='o', color='red',markerfacecolor='none',transform=ax.get_transform('fk5'), markersize=8)

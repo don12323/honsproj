@@ -96,7 +96,7 @@ def plot_sed(S, f, Serr, input_file, output_dir, beta_lower, Stderr_lower, beta_
     plt.grid(True)
     plt.legend()
 
-    # Save the plot as a PNG file
+    # Save plot as PNG
     
     output_filename = input_file.replace('.csv', '_sed.png').replace('.dat', '_sed.png').replace('.txt','_sed.png')
     #plt.savefig(os.path.join(output_dir, output_filename)i,dpi=300)
@@ -108,11 +108,11 @@ if __name__ == "__main__":
         print("incorrect argument")
         sys.exit(1)
     
-    input_file = sys.argv[1]  # Path to the input text file
+    input_file = sys.argv[1]  
     S, f, Serr = read_data(input_file)
     
     
-    output_dir = '/data/donwijesinghe/results'   # Path to the directory where the plot will be saved
+    output_dir = '/data/donwijesinghe/results'   
 
     beta_lower, Stderr_lower, beta_upper, Stderr_upper, lower, upper = splitWLLS(S, f, Serr, 1.45)
     plot_sed(S, f, Serr, input_file, output_dir,beta_lower, Stderr_lower, beta_upper, Stderr_upper, lower, upper)
