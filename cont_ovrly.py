@@ -44,7 +44,7 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2)
     # Plot the reprojected infrared im #TODO Interpolation messes up the infrared image in some cases
     ax.imshow(ir_data[0], cmap='gray_r', origin='lower',
               vmin=np.percentile(ir_data, 1),
-              vmax=np.percentile(ir_data, 99.8))
+              vmax=np.percentile(ir_data, 99.6))
 
 
     ax.set_xlabel('R.A. (J2000)')
@@ -58,13 +58,13 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2)
     #contour_lvls = np.array([3, 6, 9, 12, 15, 18, 21, 24]) * rms_c
     #contour_lvls = np.array([i for i in range(3,69,9)]) * rms_c
 
-    contour_lvls = np.logspace(np.log10(3), np.log10(40), num=int((np.log10(40) - np.log10(3)) / 0.15 +1)) * rms_c
+    contour_lvls = np.logspace(np.log10(3), np.log10(25), num=int((np.log10(25) - np.log10(3)) / 0.2 +1)) * rms_c
     print(contour_lvls/rms_c)
     ax.contour(contour_data, levels=contour_lvls, colors='black', linewidths=0.8,transform=ax.get_transform(contour_wcs))
     
     # Plot optional contoursd
     if contour2_fits and rms_c2 is not None:
-        contour2_lvls = np.logspace(np.log10(3), np.log10(10), num=int((np.log10(10) - np.log10(3)) / 0.12 +1)) * rms_c2
+        contour2_lvls = np.logspace(np.log10(3), np.log10(25), num=int((np.log10(25) - np.log10(3)) / 0.2 +1)) * rms_c2
         ax.contour(contour2_data, levels=contour2_lvls, colors='blue', linewidths=0.8,transform=ax.get_transform(contour2_wcs))
     
     # Mark possible hg positions
@@ -86,18 +86,18 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2)
     # Add beam
     wcsaxes.add_beam(ax, header=contour_header,alpha=0.8,pad=0.65, facecolor='none',edgecolor='black', frame=True)
     if rms_c2 is not None:
-        wcsaxes.add_beam(ax, header=contour2_header,alpha=0.8,pad=0.65, facecolor='none',edgecolor='blue')
+        wcsaxes.add_beam(ax, header=contour2_header,alpha=0.65, facecolor='none',edgecolor='blue', frame =False)
     kpc_per_arcsec = 2.335 * u.kpc / u.arcsec
 
     # Scale bar in kpc
-    scale_length_kpc = 50 * u.kpc
+    scale_length_kpc = 150 * u.kpc
     scale_length_arcsec = scale_length_kpc / kpc_per_arcsec
     scale_length_arcsec = (scale_length_kpc / kpc_per_arcsec).to(u.arcsec)
     scale_length_deg = scale_length_arcsec.to(u.deg)
     
     # Add the scale bar
     wcsaxes.add_scalebar(ax, length=scale_length_deg, label=f'{scale_length_kpc.value:.0f} kpc',
-            corner='bottom right', frame=False, color='white')
+            corner='bottom right', frame=False, color='k')
     
 
     fig.tight_layout()

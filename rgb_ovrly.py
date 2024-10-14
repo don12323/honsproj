@@ -49,9 +49,9 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     # Create mask for values greater than 3*rms
     
     # normalize
-    pct = 99.9
+    pct = 99.6
     interval = PercentileInterval(pct)
-    stretch =AsinhStretch(a=0.1) + PowerDistStretch(a=10000)  #makes bkg noise worse
+    stretch =AsinhStretch(a=0.01) + PowerDistStretch(a=10000)  #makes bkg noise worse
 
     i = interval.get_limits(ir_data[0])
     r = stretch(normalize(ir_data[0], *i))
@@ -84,13 +84,13 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     ax.set_ylabel('Dec. (J2000)')
     #instead of gaussian blending normalise radio_masked array and use that as alpha array
     alpha = normalize(radio_masked, 3*rms_r, np.max(radio_masked))
-    alpha_stretch = AsinhStretch(a=0.5)
+    alpha_stretch = AsinhStretch(a=0.1)
     alpha = alpha_stretch(alpha)
     # Overlay masked radio im in mJy 
     #gaus_bl = gaussian_filter(mask.astype(float), sigma=3)*0.99
     ax.imshow(radio_interp * 1e3, cmap='magma', origin='lower',
             #alpha=alpha)#gist_heat
-            alpha=gaussian_filter(mask.astype(float), sigma=30)*0.9) # Blend from 0.9 alpha
+            alpha=gaussian_filter(mask.astype(float), sigma=90)*0.95) # Blend from 0.9 alpha
 
             #alpha = alpha)
     ax.tick_params(direction='in', colors='white')
@@ -98,7 +98,7 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     ax.tick_params(axis='y', which='both', labelcolor='black')
 
     # Plot radio contours 'YlOrd'
-    contour_lvls = np.logspace(np.log10(3), np.log10(40), num=int((np.log10(40) - np.log10(3)) / 0.2 +1)) * rms_c
+    contour_lvls = np.logspace(np.log10(3), np.log10(22), num=int((np.log10(22) - np.log10(3)) / 0.15 +1)) * rms_c
     print(contour_lvls/rms_c)
     ax.contour(contour_data, levels=contour_lvls, cmap='YlOrRd', linewidths=0.5, alpha=0.4,transform=ax.get_transform(contour_wcs))
     
@@ -143,7 +143,7 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     fig.tight_layout()
     plt.show()
     fig.savefig('ovrly_magma_test.pdf')
-    fig.savefig('rgb_rad_ovrly.jpg',dpi=800)
+    #fig.savefig('rgb_rad_ovrly.jpg',dpi=800)
 
 
 if __name__ == "__main__":
