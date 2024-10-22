@@ -14,7 +14,7 @@ from scipy.ndimage import gaussian_filter
 plt.style.use('seaborn-v0_8-bright')
 plt.rcParams["font.family"] = "serif"
 
-def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2):
+def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2, name):
     # Infrared image
     with fits.open(infrared_fits) as ir_hdul:
         ir_data = ir_hdul[0].data
@@ -58,13 +58,13 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2)
     #contour_lvls = np.array([3, 6, 9, 12, 15, 18, 21, 24]) * rms_c
     #contour_lvls = np.array([i for i in range(3,69,9)]) * rms_c
 
-    contour_lvls = np.logspace(np.log10(3), np.log10(25), num=int((np.log10(25) - np.log10(3)) / 0.2 +1)) * rms_c
+    contour_lvls = np.logspace(np.log10(3), np.log10(70), num=int((np.log10(70) - np.log10(3)) / 0.2 +1)) * rms_c
     print(contour_lvls/rms_c)
     ax.contour(contour_data, levels=contour_lvls, colors='black', linewidths=0.8,transform=ax.get_transform(contour_wcs))
     
     # Plot optional contoursd
     if contour2_fits and rms_c2 is not None:
-        contour2_lvls = np.logspace(np.log10(3), np.log10(25), num=int((np.log10(25) - np.log10(3)) / 0.2 +1)) * rms_c2
+        contour2_lvls = np.logspace(np.log10(3), np.log10(40), num=int((np.log10(40) - np.log10(3)) / 0.3 +1)) * rms_c2
         ax.contour(contour2_data, levels=contour2_lvls, colors='blue', linewidths=0.8,transform=ax.get_transform(contour2_wcs))
     
     # Mark possible hg positions
@@ -84,13 +84,12 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2)
                 ax.text(c.ra.deg, c.dec.deg, f'   {i}', color='red', transform=ax.get_transform('fk5'), fontsize=8, ha='left', va='top')
 
     # Add beam
-    wcsaxes.add_beam(ax, header=contour_header,alpha=0.8,pad=0.65, facecolor='none',edgecolor='black', frame=True)
     if rms_c2 is not None:
-        wcsaxes.add_beam(ax, header=contour2_header,alpha=0.65, facecolor='none',edgecolor='blue', frame =False)
-    kpc_per_arcsec = 2.335 * u.kpc / u.arcsec
-
+        wcsaxes.add_beam(ax, header=contour2_header,alpha=0.65, facecolor='none',edgecolor='blue',pad=0.1, frame=True)
+    kpc_per_arcsec = 1.629 * u.kpc / u.arcsec
+    wcsaxes.add_beam(ax, header=contour_header,alpha=0.8,pad=0.4, facecolor='none',edgecolor='black', frame=False)
     # Scale bar in kpc
-    scale_length_kpc = 150 * u.kpc
+    scale_length_kpc = 20 * u.kpc
     scale_length_arcsec = scale_length_kpc / kpc_per_arcsec
     scale_length_arcsec = (scale_length_kpc / kpc_per_arcsec).to(u.arcsec)
     scale_length_deg = scale_length_arcsec.to(u.deg)
@@ -98,7 +97,10 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2)
     # Add the scale bar
     wcsaxes.add_scalebar(ax, length=scale_length_deg, label=f'{scale_length_kpc.value:.0f} kpc',
             corner='bottom right', frame=False, color='k')
-    
+    # Name
+    # Add source name text in the top left corner
+    ax.text(0.02, 0.98, name, transform=ax.transAxes, fontsize=10, color='black', 
+                    ha='left', va='top', bbox=dict(facecolor='none', alpha=0.5, edgecolor='none'))
 
     fig.tight_layout()
     plt.show()
@@ -114,8 +116,9 @@ if __name__ == "__main__":
     #optional
     parser.add_argument('--contour2',required=False,help="Path to the contour FITS image")
     parser.add_argument('--rms_c2', type=float, required=False, help='RMS value of the radio image')
+    parser.add_argument('--name', required=True, help='Name of the source being plotted')
 
     args = parser.parse_args()
 
-    main(args.infrared, args.rms_c, args.contour, args.coords, args.contour2, args.rms_c2)
+    main(args.infrared, args.rms_c, args.contour, args.coords, args.contour2, args.rms_c2, args.name)
 
