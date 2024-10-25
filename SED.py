@@ -7,8 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.mlab as mlab
 from matplotlib import rc
-rc('text', usetex=True)
-rc('font',**{'family':'serif','serif':['serif']})
+#rc('text', usetex=True)
+#rc('font',**{'family':'serif','serif':['serif']})
 
 
 
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     
     output_dir = '/data/donwijesinghe/results'   
 
-    beta_lower, Stderr_lower, beta_upper, Stderr_upper, lower, upper = splitWLLS(S, f, Serr, 1.45)
+    beta_lower, Stderr_lower, beta_upper, Stderr_upper, lower, upper = splitWLLS(S, f, Serr, 0.9)
     plot_sed(S, f, Serr, input_file, output_dir,beta_lower, Stderr_lower, beta_upper, Stderr_upper, lower, upper)
 
 
