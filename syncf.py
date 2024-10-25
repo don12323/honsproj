@@ -199,7 +199,7 @@ def main(file_name, fit_type, B_eq, z, remnant_range, extra_data):
     observed_data = (frequency, photometry, uncertainty)
 
     # Prep plotting data tuple
-    plotting_frequency = np.geomspace(10**(math.floor(np.min(np.log10(frequency)))),10**(math.ceil(np.max(np.log10(frequency)))), 100)
+    plotting_frequency = np.geomspace(10**(math.floor(np.min(np.log10(frequency)))),10**(math.ceil(np.max(np.log10(frequency)))*1.3), 100)
     plotting_data, err_plotting_data, plotting_data_min, plotting_data_max = spectral_model_(params, plotting_frequency)
     plotting_data = (plotting_frequency, plotting_data, err_plotting_data, plotting_data_min, plotting_data_max)
 
