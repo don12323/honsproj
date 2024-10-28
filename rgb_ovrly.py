@@ -90,7 +90,7 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
     #gaus_bl = gaussian_filter(mask.astype(float), sigma=3)*0.99
     ax.imshow(radio_interp * 1e3, cmap='magma', origin='lower',
             #alpha=alpha)#gist_heat
-            alpha=gaussian_filter(mask.astype(float), sigma=90)*0.95) # Blend from 0.9 alpha
+            alpha=gaussian_filter(mask.astype(float), sigma=3)*0.95) # Blend from 0.9 alpha
 
             #alpha = alpha)
     ax.tick_params(direction='in', colors='white')
@@ -124,13 +124,13 @@ def main(rgb_fits, radio_fits, rms_r, rms_c, contour_fits, coords_file):
 
     # Add synthesized beam
     wcsaxes.add_beam(ax, header=contour_header,alpha=0.9,pad=0.65,frame=False)
-    wcsaxes.add_beam(ax,header=radio_header,color='orange',alpha=0.9,pad=1.1) 
+    wcsaxes.add_beam(ax,header=radio_header,color='orange',alpha=0.9,pad=1.5) 
     # Radio image color bar
     cbar = fig.colorbar(ax.images[-1], ax=ax, shrink=1, pad=0.01,aspect=40) #pad=0.04
     cbar.set_label('Brightness (mJy/beam)')
-    kpc_per_arcsec = 5.141 * u.kpc / u.arcsec
+    kpc_per_arcsec = 2.951 * u.kpc / u.arcsec
 
-    scale_length_kpc = 100 * u.kpc
+    scale_length_kpc = 80 * u.kpc
     scale_length_arcsec = scale_length_kpc / kpc_per_arcsec
 
     # Conv to deg

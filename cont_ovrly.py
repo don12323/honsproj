@@ -50,7 +50,7 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2,
     ax = fig.add_subplot(111, projection=ir_wcs)
     # Plot the reprojected infrared im #TODO Interpolation messes up the infrared image in some cases
     ax.imshow(ir_data[0], cmap='gray_r', origin='lower',
-              vmin=np.percentile(ir_data, 20),
+              vmin=np.percentile(ir_data, 1),
               vmax=np.percentile(ir_data, 99.9))
 
 
@@ -71,7 +71,7 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2,
     
     # Plot optional contoursd
     if contour2_fits and rms_c2 is not None:
-        contour2_lvls = np.logspace(np.log10(3), np.log10(70), num=int((np.log10(70) - np.log10(3)) / 0.2 +1)) * rms_c2
+        contour2_lvls = np.logspace(np.log10(3), np.log10(70), num=int((np.log10(70) - np.log10(3)) / 0.4 +1)) * rms_c2
         ax.contour(contour2_data, levels=contour2_lvls, colors='blue', linewidths=0.8,transform=ax.get_transform(contour2_wcs))
     
     # Mark possible hg positions
@@ -93,10 +93,10 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2,
     # Add inset im if provided
     if inset_im_file is not None:
         # Cutout region pos and size
-        ra =305.364159 # DEG
-        dec= 12.956446  # DEG
-        inset_size = 30  # Arcsec
-        rms_inset = 0.0000146522
+        ra = 349.4606904 # DEG
+        dec= -19.4000501 # DEG
+        inset_size = 10  # Arcsec
+        rms_inset = 1.26238e-05
 
         position = SkyCoord(ra, dec, unit='deg', frame='fk5')
         size = u.Quantity((inset_size, inset_size), u.arcsec)
@@ -117,12 +117,12 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2,
         ax.plot(rect_x, rect_y, color='red', transform=ax.get_transform('fk5'))
         
         # Add new inset axis
-        inset_ax = fig.add_axes([0.3, 0.61, 0.27, 0.27], projection=cutout_ir.wcs) # [0.65, 0.71, 0.22, 0.22]
+        inset_ax = fig.add_axes([0.65, 0.71, 0.22, 0.22], projection=cutout_ir.wcs) # [0.65, 0.71, 0.22, 0.22] [0.3, 0.61, 0.27, 0.27]
         
         # Plot cutout data
         inset_ax.imshow(cutout_ir.data, cmap='gray', origin='lower',
                   vmin=np.percentile(cutout_ir.data, 1),
-                  vmax=np.percentile(cutout_ir.data, 99.6))
+                  vmax=np.percentile(cutout_ir.data, 99.1))
         
         contour_lvls_inset = np.logspace(np.log10(3), np.log10(25), num=int((np.log10(25) - np.log10(3)) / 0.15 +1)) * rms_inset
         print(contour_lvls_inset)
@@ -135,10 +135,7 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2,
         inset_ax.coords[1].set_ticklabel_visible(False)
         inset_ax.tick_params(direction='in', color='red')
         
-        #inset_ax.spines['left'].set_color('red') 
-        #inset_ax.spines['top'].set_color('red') 
-        #inset_ax.spines['bottom'].set_color('red') 
-        #inset_ax.spines['right'].set_color('red') 
+        #inset_ax.spines['right'].set_color('red') TODO DOESNT WORK!??!?! 
         if coords_file is not None:
 
             coords_list = []
@@ -151,25 +148,33 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2,
                                    dec=[c[1] for c in coords_list] * u.deg, frame='fk5')
             for i, c in enumerate(host_coords,start=1):
                 print(i)
-                inset_ax.plot(c.ra.deg, c.dec.deg,marker='o', markerfacecolor='none', color='red',transform=inset_ax.get_transform('fk5'), markersize=9)
+                inset_ax.plot(c.ra.deg, c.dec.deg,marker='o', markerfacecolor='none', 
+                        color='red',transform=inset_ax.get_transform('fk5'), markersize=9)
                 if len(host_coords) > 1:
-                    inset_ax.text(c.ra.deg, c.dec.deg, f' {i}', color='red', transform=inset_ax.get_transform('fk5'), fontsize=10, ha='left', va='top')
+                    inset_ax.text(c.ra.deg, c.dec.deg, f' {i}', color='red', 
+                            transform=inset_ax.get_transform('fk5'), fontsize=10, ha='left', va='top')
     
     # Add beam
+
     if rms_c2 is not None:
-        wcsaxes.add_beam(ax, header=contour2_header,alpha=0.65, facecolor='none',edgecolor='blue',pad=0.1, frame=True)
-    wcsaxes.add_beam(ax, header=contour_header,alpha=0.9,pad=0.3, facecolor='none',edgecolor='black', frame=False)
+        wcsaxes.add_beam(ax, header=contour2_header,alpha=0.65, facecolor='none',edgecolor='blue',pad=0.6, frame=True)
     
+    wcsaxes.add_beam(ax, header=contour_header,alpha=0.9,pad=0.6, facecolor='none',edgecolor='black', frame=False)
+    # add extra point 
+    #coord1 = SkyCoord(ra=270.2779984 * u.deg, dec=18.5435369 * u.deg, frame='fk5')
+    #ax.plot(coord1.ra.deg, coord1.dec.deg, 
+    #        marker='s',color='cyan',markerfacecolor='none',transform=ax.get_transform('fk5'),markersize=18)
+
     # Scale bar in kpc
-    kpc_per_arcsec = 5.572 * u.kpc / u.arcsec
-    scale_length_kpc = 150 * u.kpc
+    kpc_per_arcsec = 2.951 * u.kpc / u.arcsec
+    scale_length_kpc = 80 * u.kpc
     scale_length_arcsec = scale_length_kpc / kpc_per_arcsec
     scale_length_arcsec = (scale_length_kpc / kpc_per_arcsec).to(u.arcsec)
     scale_length_deg = scale_length_arcsec.to(u.deg)
     
     # Add the scale bar
     #wcsaxes.add_scalebar(ax, length=scale_length_deg, label=f'{scale_length_kpc.value:.0f} kpc',
-            #corner='bottom right', frame=False, color='k')
+    #        corner='bottom right', frame=False, color='k')
     # Name
     # Add source name text in the top left corner
     ax.text(0.02, 0.98, name, transform=ax.transAxes, fontsize=10, color='black', 
