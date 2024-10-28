@@ -65,7 +65,7 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2,
     #contour_lvls = np.array([3, 6, 9, 12, 15, 18, 21, 24]) * rms_c
     #contour_lvls = np.array([i for i in range(3,69,9)]) * rms_c
 
-    contour_lvls = np.logspace(np.log10(3), np.log10(90), num=int((np.log10(90) - np.log10(3)) / 0.15 +1)) * rms_c
+    contour_lvls = np.logspace(np.log10(3), np.log10(100), num=int((np.log10(100) - np.log10(3)) / 0.15 +1)) * rms_c
     print(contour_lvls/rms_c)
     ax.contour(contour_data, levels=contour_lvls, colors='black', linewidths=0.8,transform=ax.get_transform(contour_wcs))
     
@@ -93,10 +93,10 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2,
     # Add inset im if provided
     if inset_im_file is not None:
         # Cutout region pos and size
-        ra = 349.4606904 # DEG
-        dec= -19.4000501 # DEG
+        ra = 184.761099 # DEG
+        dec= -7.25141 # DEG
         inset_size = 10  # Arcsec
-        rms_inset = 1.26238e-05
+        rms_inset = 4.42E-05
 
         position = SkyCoord(ra, dec, unit='deg', frame='fk5')
         size = u.Quantity((inset_size, inset_size), u.arcsec)
@@ -124,8 +124,11 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2,
                   vmin=np.percentile(cutout_ir.data, 1),
                   vmax=np.percentile(cutout_ir.data, 99.1))
         
-        contour_lvls_inset = np.logspace(np.log10(3), np.log10(25), num=int((np.log10(25) - np.log10(3)) / 0.15 +1)) * rms_inset
+        contour_lvls_inset = np.logspace(np.log10(3), np.log10(25), num=int((np.log10(25) - np.log10(3)) / 0.1 +1)) * rms_inset
         print(contour_lvls_inset)
+        print(f"Shape of inset cutout data: {cutout_inset.data.shape}")
+        print(f"Contour levels for inset: {contour_lvls_inset}")
+
         inset_ax.contour(cutout_inset.data, levels=contour_lvls_inset, colors='yellow', linewidths=0.8,transform=inset_ax.get_transform(cutout_inset.wcs))
         
         # Tick param stuff
@@ -159,14 +162,14 @@ def main(infrared_fits, rms_c, contour_fits, coords_file, contour2_fits, rms_c2,
     if rms_c2 is not None:
         wcsaxes.add_beam(ax, header=contour2_header,alpha=0.65, facecolor='none',edgecolor='blue',pad=0.6, frame=True)
     
-    wcsaxes.add_beam(ax, header=contour_header,alpha=0.9,pad=0.6, facecolor='none',edgecolor='black', frame=False)
+    wcsaxes.add_beam(ax, header=contour_header,alpha=0.9,pad=1.5, facecolor='none',edgecolor='black', frame=False)
     # add extra point 
-    #coord1 = SkyCoord(ra=270.2779984 * u.deg, dec=18.5435369 * u.deg, frame='fk5')
-    #ax.plot(coord1.ra.deg, coord1.dec.deg, 
-    #        marker='s',color='cyan',markerfacecolor='none',transform=ax.get_transform('fk5'),markersize=18)
+    coord1 = SkyCoord(ra=13.931419 * u.deg, dec=22.964866 * u.deg, frame='fk5')
+    ax.plot(coord1.ra.deg, coord1.dec.deg, 
+            marker='s',color='cyan',markerfacecolor='none',transform=ax.get_transform('fk5'),markersize=20)
 
     # Scale bar in kpc
-    kpc_per_arcsec = 2.951 * u.kpc / u.arcsec
+    kpc_per_arcsec = 2.884 * u.kpc / u.arcsec
     scale_length_kpc = 80 * u.kpc
     scale_length_arcsec = scale_length_kpc / kpc_per_arcsec
     scale_length_arcsec = (scale_length_kpc / kpc_per_arcsec).to(u.arcsec)

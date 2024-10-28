@@ -264,8 +264,8 @@ if __name__ == "__main__":
     with open(args.infits, 'r') as file:
         fits_files = [line.strip() for line in file.readlines()]
     
-    reg_file = 'regs/ll_flux.reg' #flux_reg
-    bkg_file = 'regs/bkg_flux_reg.reg'
+    reg_file = 'flux.reg' #flux_reg
+    bkg_file = 'bkg.reg'
     
 
     frequencies = []
